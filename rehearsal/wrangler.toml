@@ -1,0 +1,21 @@
+name = "rehearsal-api"
+main = "functions/api/index.ts"
+compatibility_date = "2024-01-15"
+
+# R2 bucket binding
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "rehearsal-stems"
+preview_bucket_name = "rehearsal-stems-preview"
+
+# Local development configuration
+[dev]
+ip = "127.0.0.1"
+port = 8787
+local_protocol = "http"
+
+[env.production]
+name = "rehearsal-api"
+
+[env.staging]
+name = "rehearsal-api-staging"

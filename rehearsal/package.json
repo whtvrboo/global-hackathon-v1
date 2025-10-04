@@ -8,6 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:api": "wrangler dev --port 8787",
+    "dev:partykit": "partykit dev --port 1999",
+    "dev:full": "run-p dev dev:api dev:partykit",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
@@ -18,9 +21,15 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "partykit": "^0.0.115",
     "pinia": "^3.0.3",
+    "tailwindcss": "^4.1.14",
     "vue": "^3.5.22",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "wavesurfer.js": "^7.3.6",
+    "y-partykit": "^0.0.0-d344222",
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@prettier/plugin-oxc": "^0.0.4",
@@ -30,6 +39,7 @@
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
+    "daisyui": "^5.1.27",
     "eslint": "^9.33.0",
     "eslint-plugin-oxlint": "~1.11.0",
     "eslint-plugin-vue": "~10.4.0",
