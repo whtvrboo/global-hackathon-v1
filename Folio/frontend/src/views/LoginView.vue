@@ -1,14 +1,17 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
+  <div class="min-h-screen bg-dark-950 flex items-center justify-center">
     <div class="card max-w-md w-full text-center">
       <div class="mb-8">
-        <div class="text-6xl mb-4">📚</div>
-        <h1 class="text-4xl font-bold text-gray-900 mb-2">Welcome to Folio</h1>
-        <p class="text-gray-600">Your personal reading journal</p>
+        <div
+          class="w-16 h-16 bg-gradient-to-br from-accent-red to-accent-blue rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <span class="text-3xl">📚</span>
+        </div>
+        <h1 class="text-display-2 mb-4 text-gradient">Welcome to Folio</h1>
+        <p class="text-body text-dark-300">Your personal reading journal</p>
       </div>
 
-      <div class="space-y-4">
-        <a :href="googleAuthUrl" class="btn btn-primary btn-block gap-2">
+      <div class="space-y-6">
+        <a :href="googleAuthUrl" class="btn-primary w-full flex items-center justify-center gap-3 py-4">
           <svg class="w-5 h-5" viewBox="0 0 24 24">
             <path fill="currentColor"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -24,20 +27,30 @@
 
         <div class="relative">
           <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-300" />
+            <div class="w-full border-t border-dark-700" />
           </div>
           <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-white text-gray-500">or</span>
+            <span class="px-4 bg-dark-900 text-dark-400">or</span>
           </div>
         </div>
 
-        <button @click="tryAsGuest" :disabled="loading" class="btn btn-outline btn-block gap-2">
-          <span v-if="loading" class="loading loading-spinner loading-sm"></span>
-          <span v-else>👤</span>
+        <button @click="tryAsGuest" :disabled="loading"
+          class="btn-secondary w-full flex items-center justify-center gap-3 py-4">
+          <span v-if="loading" class="animate-spin rounded-full h-5 w-5 border-2 border-dark-400 border-t-white"></span>
+          <span v-else class="text-xl">👤</span>
           {{ loading ? 'Creating guest account...' : 'Try as Guest' }}
         </button>
 
-        <p class="text-sm text-gray-500 mt-6">
+        <div class="mt-8 p-4 bg-dark-800/50 rounded-xl border border-dark-700">
+          <h3 class="text-sm font-semibold text-white mb-2">✨ Guest Account Benefits</h3>
+          <ul class="text-xs text-dark-300 space-y-1">
+            <li>• Save books locally on your device</li>
+            <li>• Try all features risk-free</li>
+            <li>• Upgrade anytime to sync across devices</li>
+          </ul>
+        </div>
+
+        <p class="text-caption text-dark-500">
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

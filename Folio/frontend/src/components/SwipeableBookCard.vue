@@ -1,86 +1,91 @@
 <template>
-    <div ref="cardRef" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd"
-        @mousedown="handleMouseDown" :style="{
-            transform: `translate(${translateX}px, ${translateY}px) rotate(${rotation}deg)`,
-            opacity: opacity,
-            transition: isAnimating ? 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : 'none'
-        }" class="absolute inset-0 cursor-grab active:cursor-grabbing select-none">
-        <div class="h-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <!-- Book Cover - Takes up most of the card -->
-            <div class="relative flex-1 bg-gradient-to-br from-gray-100 to-gray-200">
-                <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title" class="w-full h-full object-contain"
-                    @load="imageLoaded = true" />
-                <div v-else class="w-full h-full flex items-center justify-center text-8xl">
+    <div class="relative w-full max-w-sm mx-auto">
+        <!-- Swipeable Card Container -->
+        <div ref="cardRef" class="card card-hover group relative overflow-hidden"
+            :style="{ transform: `translateX(${translateX}px) rotate(${rotation}deg)` }" @touchstart="handleTouchStart"
+            @touchmove="handleTouchMove" @touchend="handleTouchEnd" @mousedown="handleMouseDown"
+            @mousemove="handleMouseMove" @mouseup="handleMouseEnd" @mouseleave="handleMouseEnd">
+            <!-- Book Cover -->
+            <div class="aspect-[2/3] relative overflow-hidden bg-dark-800 rounded-xl mb-4">
+                <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div v-else class="w-full h-full flex items-center justify-center text-4xl text-dark-400">
                     📚
                 </div>
 
-                <!-- Swipe Indicators -->
-                <div class="absolute top-8 left-8 transform -rotate-12 transition-opacity duration-200"
-                    :style="{ opacity: likeOpacity }">
-                    <div
-                        class="px-6 py-3 border-4 border-green-500 text-green-500 font-bold text-2xl rounded-xl bg-white/90">
-                        LIKE
-                    </div>
+                <!-- Status Badge -->
+                <div v-if="book.status"
+                    class="absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full glass-strong"
+                    :class="statusColor(book.status)">
+                    {{ statusLabel(book.status) }}
                 </div>
 
-                <div class="absolute top-8 right-8 transform rotate-12 transition-opacity duration-200"
-                    :style="{ opacity: passOpacity }">
-                    <div
-                        class="px-6 py-3 border-4 border-red-500 text-red-500 font-bold text-2xl rounded-xl bg-white/90">
-                        PASS
-                    </div>
+                <!-- Rating Overlay -->
+                <div v-if="book.rating"
+                    class="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 glass-strong rounded-full">
+                    <span class="text-accent-orange text-sm">★</span>
+                    <span class="text-white text-sm font-semibold">{{ book.rating }}</span>
                 </div>
             </div>
 
             <!-- Book Info -->
-            <div class="p-6 bg-white">
-                <h2 class="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
+            <div class="p-4">
+                <h3 class="font-semibold text-white line-clamp-2 mb-2 text-lg leading-tight">
                     {{ book.title }}
-                </h2>
-                <p v-if="book.authors?.length" class="text-lg text-gray-600 mb-3 line-clamp-1">
-                    {{ book.authors.join(', ') }}
+                </h3>
+                <p v-if="book.authors?.length" class="text-sm text-dark-400 line-clamp-1 mb-3">
+                    by {{ book.authors.join(', ') }}
                 </p>
 
-                <!-- Quick Stats -->
-                <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                    <div v-if="book.rating" class="flex items-center gap-1">
-                        <span class="text-yellow-500">★</span>
-                        <span class="font-medium">{{ book.rating }}</span>
-                        <span v-if="book.ratings_count">({{ formatNumber(book.ratings_count) }})</span>
-                    </div>
-                    <div v-if="book.page_count" class="flex items-center gap-1">
-                        📖 {{ book.page_count }} pages
-                    </div>
-                </div>
-
-                <!-- Categories -->
-                <div v-if="book.categories?.length" class="flex flex-wrap gap-2 mb-4">
-                    <span v-for="(category, index) in book.categories.slice(0, 3)" :key="index"
-                        class="px-3 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                        {{ category }}
-                    </span>
-                </div>
-
-                <!-- Description Preview -->
-                <p v-if="book.description" class="text-sm text-gray-700 line-clamp-3 leading-relaxed">
+                <!-- Description -->
+                <p v-if="book.description" class="text-caption text-dark-300 line-clamp-3 mb-4">
                     {{ book.description }}
                 </p>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                    <button @click="$emit('like', book)" class="flex-1 btn-primary text-sm py-2">
+                        ❤️ Like
+                    </button>
+                    <button @click="$emit('add-to-list', book)" class="flex-1 btn-secondary text-sm py-2">
+                        📚 Add to List
+                    </button>
+                </div>
+            </div>
+
+            <!-- Swipe Indicators -->
+            <div class="absolute inset-0 pointer-events-none">
+                <!-- Like Indicator -->
+                <div v-if="swipeDirection === 'right'"
+                    class="absolute top-1/2 left-8 transform -translate-y-1/2 text-accent-green text-6xl font-bold opacity-50">
+                    LIKE
+                </div>
+
+                <!-- Pass Indicator -->
+                <div v-if="swipeDirection === 'left'"
+                    class="absolute top-1/2 right-8 transform -translate-y-1/2 text-accent-red text-6xl font-bold opacity-50">
+                    PASS
+                </div>
             </div>
         </div>
 
-        <!-- Action Buttons (fallback for non-swipe) -->
-        <div class="absolute bottom-24 left-0 right-0 flex justify-center gap-6 pointer-events-none">
-            <button @click.stop="handlePass"
-                class="pointer-events-auto w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center text-2xl hover:scale-110 transition-transform active:scale-95">
-                ✕
+        <!-- Swipe Actions -->
+        <div class="flex justify-center gap-4 mt-4">
+            <button @click="swipeLeft"
+                class="w-12 h-12 bg-dark-800 hover:bg-accent-red/20 rounded-full flex items-center justify-center transition-colors">
+                <svg class="w-6 h-6 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
             </button>
-            <button @click.stop="handleLike"
-                class="pointer-events-auto w-16 h-16 rounded-full bg-primary shadow-xl flex items-center justify-center text-2xl hover:scale-110 transition-transform active:scale-95">
-                ❤️
-            </button>
-            <button @click.stop="$emit('info')"
-                class="pointer-events-auto w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center text-2xl hover:scale-110 transition-transform active:scale-95">
-                ℹ️
+
+            <button @click="swipeRight"
+                class="w-12 h-12 bg-dark-800 hover:bg-accent-green/20 rounded-full flex items-center justify-center transition-colors">
+                <svg class="w-6 h-6 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                    </path>
+                </svg>
             </button>
         </div>
     </div>
@@ -96,33 +101,35 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['swipe-left', 'swipe-right', 'info'])
+const emit = defineEmits(['like', 'add-to-list', 'pass'])
 
 const cardRef = ref(null)
 const translateX = ref(0)
-const translateY = ref(0)
+const rotation = ref(0)
+const swipeDirection = ref(null)
+const isDragging = ref(false)
 const startX = ref(0)
 const startY = ref(0)
-const isDragging = ref(false)
-const isAnimating = ref(false)
-const imageLoaded = ref(false)
 
-const rotation = computed(() => {
-    return translateX.value / 20 // Subtle rotation based on drag
-})
+const statusLabel = (status) => {
+    const labels = {
+        'want_to_read': 'Want to Read',
+        'reading': 'Reading',
+        'read': 'Read',
+        'dnf': 'DNF'
+    }
+    return labels[status] || status
+}
 
-const opacity = computed(() => {
-    const distance = Math.abs(translateX.value)
-    return Math.max(1 - distance / 400, 0.5)
-})
-
-const likeOpacity = computed(() => {
-    return translateX.value > 0 ? Math.min(translateX.value / 100, 1) : 0
-})
-
-const passOpacity = computed(() => {
-    return translateX.value < 0 ? Math.min(Math.abs(translateX.value) / 100, 1) : 0
-})
+const statusColor = (status) => {
+    const colors = {
+        'want_to_read': 'text-accent-blue bg-accent-blue/20',
+        'reading': 'text-accent-green bg-accent-green/20',
+        'read': 'text-accent-purple bg-accent-purple/20',
+        'dnf': 'text-dark-400 bg-dark-600/20'
+    }
+    return colors[status] || 'text-dark-400 bg-dark-600/20'
+}
 
 const handleTouchStart = (e) => {
     isDragging.value = true
@@ -130,85 +137,100 @@ const handleTouchStart = (e) => {
     startY.value = e.touches[0].clientY
 }
 
+const handleTouchMove = (e) => {
+    if (!isDragging.value) return
+
+    const currentX = e.touches[0].clientX
+    const deltaX = currentX - startX.value
+
+    translateX.value = deltaX
+    rotation.value = deltaX * 0.1
+
+    // Determine swipe direction
+    if (Math.abs(deltaX) > 50) {
+        swipeDirection.value = deltaX > 0 ? 'right' : 'left'
+    } else {
+        swipeDirection.value = null
+    }
+}
+
+const handleTouchEnd = () => {
+    if (!isDragging.value) return
+
+    isDragging.value = false
+
+    if (Math.abs(translateX.value) > 100) {
+        if (translateX.value > 0) {
+            swipeRight()
+        } else {
+            swipeLeft()
+        }
+    } else {
+        resetPosition()
+    }
+}
+
 const handleMouseDown = (e) => {
     isDragging.value = true
     startX.value = e.clientX
     startY.value = e.clientY
-
-    const handleMouseMove = (e) => {
-        if (!isDragging.value) return
-        translateX.value = e.clientX - startX.value
-        translateY.value = (e.clientY - startY.value) * 0.5 // Less vertical movement
-    }
-
-    const handleMouseUp = () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-        handleDragEnd()
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    e.preventDefault()
 }
 
-const handleTouchMove = (e) => {
+const handleMouseMove = (e) => {
     if (!isDragging.value) return
-    translateX.value = e.touches[0].clientX - startX.value
-    translateY.value = (e.touches[0].clientY - startY.value) * 0.5
+
+    const deltaX = e.clientX - startX.value
+
+    translateX.value = deltaX
+    rotation.value = deltaX * 0.1
+
+    if (Math.abs(deltaX) > 50) {
+        swipeDirection.value = deltaX > 0 ? 'right' : 'left'
+    } else {
+        swipeDirection.value = null
+    }
 }
 
-const handleTouchEnd = () => {
-    handleDragEnd()
-}
+const handleMouseEnd = () => {
+    if (!isDragging.value) return
 
-const handleDragEnd = () => {
     isDragging.value = false
 
-    const threshold = 100 // Minimum swipe distance
-
-    if (translateX.value > threshold) {
-        // Swiped right - Like
-        animateSwipe('right')
-    } else if (translateX.value < -threshold) {
-        // Swiped left - Pass
-        animateSwipe('left')
+    if (Math.abs(translateX.value) > 100) {
+        if (translateX.value > 0) {
+            swipeRight()
+        } else {
+            swipeLeft()
+        }
     } else {
-        // Return to center
-        isAnimating.value = true
-        translateX.value = 0
-        translateY.value = 0
-        setTimeout(() => {
-            isAnimating.value = false
-        }, 300)
+        resetPosition()
     }
 }
 
-const animateSwipe = (direction) => {
-    isAnimating.value = true
-    translateX.value = direction === 'right' ? 1000 : -1000
-    translateY.value = translateY.value + 100
+const swipeLeft = () => {
+    translateX.value = -300
+    rotation.value = -30
+    swipeDirection.value = 'left'
 
     setTimeout(() => {
-        if (direction === 'right') {
-            emit('swipe-right', props.book)
-        } else {
-            emit('swipe-left', props.book)
-        }
+        emit('pass', props.book)
     }, 300)
 }
 
-const handleLike = () => {
-    animateSwipe('right')
+const swipeRight = () => {
+    translateX.value = 300
+    rotation.value = 30
+    swipeDirection.value = 'right'
+
+    setTimeout(() => {
+        emit('like', props.book)
+    }, 300)
 }
 
-const handlePass = () => {
-    animateSwipe('left')
-}
-
-const formatNumber = (num) => {
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'k'
-    }
-    return num.toString()
+const resetPosition = () => {
+    translateX.value = 0
+    rotation.value = 0
+    swipeDirection.value = null
 }
 </script>
