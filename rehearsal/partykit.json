@@ -1,8 +1,0 @@
-{
-  "name": "rehearsal",
-  "main": "party/index.ts",
-  "parties": {
-    "rehearsal_partykit": "party/index.ts"
-  },
-  "compatibilityDate": "2025-10-04"
-}
