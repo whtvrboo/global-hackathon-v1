@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
-import VersionSelector from '@/components/VersionSelector.vue'
+import CommitHistory from '@/components/CommitHistory.vue'
 import WaveformStem from '@/components/WaveformStem.vue'
 import CommentSidebar from '@/components/CommentSidebar.vue'
 import { useCollaboration } from '@/composables/useCollaboration'
+import { useAuthStore } from '@/stores/auth'
+import { useRecorder } from '@/composables/useRecorder'
 import type { Stem, Comment } from '@/data/dummyData'
-import type { Version } from '@/composables/useCollaboration'
+import type { Commit as Version } from '@/composables/useCollaboration' // Alias for compatibility
 
 const route = useRoute()
 const trackId = route.params.id as string
 
 // Use the collaboration composable
-const { versions, currentVersionId, stems, comments, createNewVersion, switchVersion, addStem, addComment, trackData } = useCollaboration(trackId)
+const { versions, currentVersionId, stems, comments, connectedUsers, createNewVersion, switchVersion, addStem, addComment, updateStem, trackData } = useCollaboration(trackId)
+const auth = useAuthStore()
+const recorder = useRecorder()
 
 // File upload state
 const isUploading = ref(false)
@@ -24,11 +28,14 @@ const showCommentDialog = ref(false)
 const commentText = ref('')
 const commentTimestamp = ref(0)
 const commentStemId = ref('')
-const commentAuthor = ref('Anonymous') // In a real app, this would come from user auth
+const commentAuthor = ref('Anonymous')
+if (auth.user?.username) {
+    commentAuthor.value = auth.user.username
+}
 
 // Version state
-const showVersionDialog = ref(false)
-const newVersionName = ref('')
+const showCommitDialog = ref(false)
+const commitMessage = ref('')
 
 // Master playback controls
 const isPlaying = ref(false)
@@ -57,6 +64,38 @@ const stopAll = () => {
     })
     isPlaying.value = false
 }
+
+const handleRecord = async () => {
+    if (recorder.isRecording.value) {
+        recorder.stop()
+        // The rest of the logic (upload, etc.) will be handled by a watcher on recorder.audioBlob
+    } else {
+        await recorder.start()
+        if (!recorder.error.value) {
+            // Add a placeholder stem
+            const placeholderStem: Stem = {
+                id: `recording-${Date.now()}`,
+                name: 'New Recording...',
+                url: '', // No URL yet
+                duration: 0,
+                isMuted: false,
+                isSolo: false,
+                authorId: auth.user?.id,
+                isRecording: true, // Custom flag
+            }
+            addStem(placeholderStem)
+        } else {
+            alert(recorder.error.value)
+        }
+    }
+}
+
+// Watch for the recording to finish
+watch(() => recorder.audioBlob.value, (newBlob) => {
+    if (newBlob) {
+        uploadRecording(newBlob)
+    }
+})
 
 // Register stem refs
 const registerStem = (stemInstance: any) => {
@@ -102,39 +141,22 @@ const cancelComment = () => {
 }
 
 // Version handling
-const handleCreateNewVersion = () => {
-    newVersionName.value = `Version ${versions.value.length + 1}`
-    showVersionDialog.value = true
+const handleCreateNewCommit = () => {
+    commitMessage.value = ''
+    showCommitDialog.value = true
 }
 
-const confirmNewVersion = () => {
-    if (newVersionName.value.trim()) {
-        // Create new version with custom name
-        const newVersionId = `v${versions.value.length + 1}`
-        const currentVersion = versions.value.find((v) => v.id === currentVersionId.value)
-
-        if (currentVersion) {
-            const newVersion: Version = {
-                id: newVersionId,
-                name: newVersionName.value.trim(),
-                stems: [...currentVersion.stems], // Deep copy stems
-                comments: [...currentVersion.comments], // Deep copy comments
-                createdAt: new Date().toISOString(),
-            }
-
-            const updatedVersions = [...versions.value, newVersion]
-            trackData.set('versions', updatedVersions)
-            trackData.set('currentVersionId', newVersionId)
-        }
-
-        showVersionDialog.value = false
-        newVersionName.value = ''
+const confirmNewCommit = () => {
+    if (commitMessage.value.trim()) {
+        createNewVersion(commitMessage.value.trim())
+        showCommitDialog.value = false
+        commitMessage.value = ''
     }
 }
 
-const cancelNewVersion = () => {
-    showVersionDialog.value = false
-    newVersionName.value = ''
+const cancelNewCommit = () => {
+    showCommitDialog.value = false
+    commitMessage.value = ''
 }
 
 // Handle file upload
@@ -178,6 +200,7 @@ const handleFileUpload = async (event: Event) => {
             duration: 0, // Will be updated when waveform is loaded
             isMuted: false,
             isSolo: false,
+            authorId: auth.user?.id,
         }
 
         // Add stem to the current version
@@ -195,12 +218,68 @@ const handleFileUpload = async (event: Event) => {
         uploadProgress.value = 0
     }
 }
+
+const uploadRecording = async (blob: Blob) => {
+    isUploading.value = true
+    const recordingStem = stems.value.find(s => s.isRecording)
+    if (!recordingStem) {
+        console.error("Couldn't find placeholder stem for recording.")
+        isUploading.value = false
+        return
+    }
+
+    try {
+        const fileName = `recording-${Date.now()}.webm`
+        const fileType = 'audio/webm'
+
+        // 1. Get presigned upload URL from our API
+        const response = await fetch('/api/get-upload-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...auth.getAuthHeader(),
+            },
+            body: JSON.stringify({ fileName, fileType }),
+        })
+
+        if (!response.ok) throw new Error('Failed to get upload URL')
+        const { uploadUrl, fileKey } = await response.json()
+
+        // 2. Upload the audio blob to R2 using the presigned URL
+        const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: blob,
+            headers: {
+                'Content-Type': fileType,
+            },
+        })
+
+        if (!uploadResponse.ok) throw new Error('Upload to R2 failed')
+
+        // 3. Construct the final public URL (adjust if you have a custom domain)
+        const finalUrl = `https://rehearsal-stems.example.com/${fileKey}`
+
+        // 4. Update the placeholder stem with the final URL
+        updateStem(recordingStem.id, {
+            url: finalUrl,
+            name: `Rec ${new Date().toLocaleTimeString()}`,
+            isRecording: false,
+        })
+
+    } catch (error) {
+        console.error('Recording upload failed:', error)
+        alert('Failed to save recording. Please try again.')
+        // Here you might want to remove the placeholder stem
+    } finally {
+        isUploading.value = false
+    }
+}
 </script>
 
 <template>
     <div class="track-view min-h-screen bg-base-200">
         <!-- Header -->
-        <TheHeader />
+        <TheHeader :users="connectedUsers" />
 
         <!-- Main Layout -->
         <div class="container mx-auto p-6">
@@ -208,8 +287,8 @@ const handleFileUpload = async (event: Event) => {
                 <!-- Central Column for Track -->
                 <div class="lg:col-span-3">
                     <!-- Version Selector -->
-                    <VersionSelector :versions="versions" :current-version-id="currentVersionId"
-                        @switch-version="switchVersion" @create-new-version="handleCreateNewVersion" />
+                    <CommitHistory :versions="versions" :current-version-id="currentVersionId"
+                        @switch-version="switchVersion" @create-new-version="handleCreateNewCommit" />
 
                     <!-- Master Controls -->
                     <div class="master-controls bg-base-100 border border-base-300 rounded-lg p-4 mb-6">
@@ -230,6 +309,14 @@ const handleFileUpload = async (event: Event) => {
                                         d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" />
                                 </svg>
                                 Stop All
+                            </button>
+                            <div class="divider divider-horizontal"></div>
+                            <button @click="handleRecord" class="btn btn-error"
+                                :class="{ 'btn-outline': !recorder.isRecording.value }">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <circle cx="10" cy="10" r="6" />
+                                </svg>
+                                {{ recorder.isRecording.value ? 'Stop' : 'Record' }}
                             </button>
                             <div class="text-sm text-base-content/70">
                                 {{ stems.length }} stem{{ stems.length !== 1 ? 's' : '' }}
@@ -299,25 +386,24 @@ const handleFileUpload = async (event: Event) => {
         </div>
 
         <!-- Version Dialog -->
-        <div v-if="showVersionDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div v-if="showCommitDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-base-100 rounded-lg p-6 w-full max-w-md mx-4">
-                <h3 class="font-semibold text-lg mb-4">Create New Version</h3>
+                <h3 class="font-semibold text-lg mb-4">Create New Commit</h3>
 
                 <div class="mb-4">
                     <p class="text-sm text-base-content/70 mb-3">
-                        This will create a copy of the current version with all stems and comments.
+                        This will save a snapshot of the current track state.
                     </p>
-                    <label class="block text-sm font-medium mb-2">Version Name:</label>
-                    <input v-model="newVersionName" class="input input-bordered w-full"
-                        placeholder="Enter version name..." @keydown.enter="confirmNewVersion"
-                        @keydown.escape="cancelNewVersion">
+                    <label class="block text-sm font-medium mb-2">Commit Message:</label>
+                    <input v-model="commitMessage" class="input input-bordered w-full"
+                        placeholder="e.g., Added bassline harmonies" @keydown.enter="confirmNewCommit"
+                        @keydown.escape="cancelNewCommit">
                 </div>
 
                 <div class="flex gap-2 justify-end">
-                    <button @click="cancelNewVersion" class="btn btn-outline btn-sm">Cancel</button>
-                    <button @click="confirmNewVersion" class="btn btn-primary btn-sm"
-                        :disabled="!newVersionName.trim()">
-                        Create Version
+                    <button @click="cancelNewCommit" class="btn btn-outline btn-sm">Cancel</button>
+                    <button @click="confirmNewCommit" class="btn btn-primary btn-sm" :disabled="!commitMessage.trim()">
+                        Create Commit
                     </button>
                 </div>
 

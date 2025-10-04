@@ -1,50 +1,34 @@
 import type * as Party from 'partykit/server'
 import { onConnect } from 'y-partykit'
+import { verifyJwt } from './auth'
 
 export default class YjsServer implements Party.Server {
-  constructor(public room: Party.Room) {
-    console.log('YjsServer created for room:', room.id)
-  }
+  constructor(public room: Party.Room) {}
 
-  async onRequest(req: Party.Request) {
-    // Handle CORS for WebSocket connections
-    if (req.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      })
+  async onConnect(conn: Party.Connection) {
+    const token = new URL(conn.uri).searchParams.get('token')
+    if (!token) {
+      console.log('Connection rejected: Missing token')
+      return conn.close(1002, 'Authentication failed')
     }
 
-    // For GET requests, return a simple response
-    if (req.method === 'GET') {
-      return new Response('PartyKit WebSocket Server', {
-        status: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-        },
-      })
+    try {
+      const payload = await verifyJwt(this.room.env.JWT_SECRET as string, token)
+      if (!payload) {
+        console.log('Connection rejected: Invalid token')
+        return conn.close(1002, 'Authentication failed')
+      }
+      // You can attach the user info to the connection for later use
+      // conn.setState({ user: { id: payload.sub, username: payload.username } });
+    } catch (err) {
+      console.error('Token verification error:', err)
+      return conn.close(1002, 'Authentication failed')
     }
 
-    return new Response('Method not allowed', { status: 405 })
-  }
-
-  onConnect(conn: Party.Connection) {
-    console.log('WebSocket connection established for room:', this.room.id)
+    console.log('Authenticated connection established for room:', this.room.id)
     return onConnect(conn, this.room, {
-      // Optional: Add configuration options here
-      // You can configure persistence, awareness, etc.
+      // Persistence can be enabled by setting the `persist` option
+      // persist: true,
     })
-  }
-
-  onClose(conn: Party.Connection) {
-    console.log('WebSocket connection closed for room:', this.room.id)
-  }
-
-  onError(conn: Party.Connection, error: Error) {
-    console.error('WebSocket error for room:', this.room.id, error)
   }
 }

@@ -10,6 +10,12 @@ export default {
       // Import and call create-track handler
       const { default: createTrackHandler } = await import('./create-track')
       return createTrackHandler.fetch(request, env, ctx)
+    } else if (pathname === '/api/auth/github') {
+      const { onRequest: githubAuth } = await import('./oauth/github')
+      return githubAuth({ request, env, ctx })
+    } else if (pathname === '/api/auth/github/callback') {
+      const { onRequest: githubCallback } = await import('./oauth/github-callback')
+      return githubCallback({ request, env, ctx })
     } else if (pathname === '/api/upload-file') {
       // Import and call upload-file handler
       const { onRequest: uploadFileHandler } = await import('./upload-file')

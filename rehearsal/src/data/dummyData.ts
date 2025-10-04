@@ -5,6 +5,8 @@ export interface Stem {
   duration: number
   isMuted: boolean
   isSolo: boolean
+  authorId?: string
+  isRecording?: boolean
 }
 
 export interface Comment {
@@ -13,6 +15,7 @@ export interface Comment {
   text: string
   author: string
   createdAt: string
+  authorId?: string
 }
 
 export const hardcodedStems: Stem[] = [

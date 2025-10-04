@@ -1,14 +1,41 @@
 import { Env } from '../../types/worker'
 
-export const onRequest: PagesFunction<Env> = async (context) => {
+export const onRequest = async (context: { request: Request; env: Env; ctx: any }) => {
   const { request, env } = context
 
+  // CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    })
+  }
   // Only allow POST requests
   if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 })
+    return new Response('Method not allowed', {
+      status: 405,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    })
   }
 
   try {
+    // Require Authorization
+    const { getBearerToken, verifyJwt } = await import('./_auth')
+    const token = getBearerToken(request)
+    const payload = token ? await verifyJwt(env as any, token) : null
+    if (!payload)
+      return new Response('Unauthorized', {
+        status: 401,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+      })
+
     const { fileName, fileType } = await request.json()
 
     if (!fileName || !fileType) {
@@ -39,6 +66,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       {
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       },
     )
@@ -53,6 +82,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       },
     )

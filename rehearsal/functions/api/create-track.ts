@@ -23,43 +23,56 @@ export default {
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       })
     }
 
     try {
-      // Parse the request body
-      const body = await request.json()
-      const { email } = body
-
-      // Validate email
-      if (!email || typeof email !== 'string') {
-        return new Response(JSON.stringify({ error: 'Email is required' }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
+      // Validate Authorization header with JWT
+      const { getBearerToken, verifyJwt } = await import('./_auth')
+      const token = getBearerToken(request)
+      if (!token) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        })
+      }
+      const payloadJson = await verifyJwt(env as any, token)
+      if (!payloadJson) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        })
+      }
+      const userId = payloadJson.sub
+      const username = payloadJson.username
+      if (!userId || !username) {
+        return new Response(JSON.stringify({ error: 'Invalid token payload' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         })
       }
 
       // Generate a random trackId
       const trackId = crypto.randomUUID()
 
-      // Log the email and trackId (as specified in requirements)
-      console.log('Creating track:', { email, trackId })
+      // Log the owner and trackId
+      console.log('Creating track:', { ownerId: userId, username, trackId })
 
       // Return success response
       return new Response(
         JSON.stringify({
           success: true,
           trackId,
+          ownerId: userId,
         }),
         {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           },
         },
       )

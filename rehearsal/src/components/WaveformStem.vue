@@ -44,6 +44,13 @@ onMounted(async () => {
             mediaControls: false,
         })
 
+        // Don't load audio if the stem is a recording placeholder
+        if (props.stem.isRecording) {
+            isLoading.value = true
+            errorMessage.value = 'Recording in progress...'
+            return
+        }
+
         // Load audio if URL is available and valid
         if (props.stem.url && props.stem.url.trim() !== '') {
             try {
@@ -196,6 +203,7 @@ const toggleSolo = () => {
         <div class="flex items-center justify-between mb-3">
             <h3 class="font-semibold text-lg">{{ stem.name }}</h3>
             <div class="flex gap-2">
+                <span v-if="stem.isRecording" class="badge badge-error animate-pulse">REC</span>
                 <button @click="toggleMute" class="btn btn-sm" :class="stem.isMuted ? 'btn-error' : 'btn-outline'">
                     {{ stem.isMuted ? 'Unmute' : 'Mute' }}
                 </button>
