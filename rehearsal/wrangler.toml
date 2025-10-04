@@ -8,6 +8,12 @@ binding = "R2_BUCKET"
 bucket_name = "rehearsal-stems"
 preview_bucket_name = "rehearsal-stems-preview"
 
+# Environment variables (set these with: wrangler secret put <KEY>)
+# GITHUB_CLIENT_ID - Your GitHub OAuth App Client ID
+# GITHUB_CLIENT_SECRET - Your GitHub OAuth App Client Secret  
+# JWT_SECRET - A random string for JWT signing (generate with: openssl rand -base64 32)
+# APP_URL - Your app URL (http://localhost:8787 for local, https://your-domain.com for production)
+
 # Local development configuration
 [dev]
 ip = "127.0.0.1"

@@ -2,22 +2,20 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
-import CommitHistory from '@/components/CommitHistory.vue'
+import TakesExplorer from '@/components/TakesExplorer.vue'
 import WaveformStem from '@/components/WaveformStem.vue'
 import CommentSidebar from '@/components/CommentSidebar.vue'
 import { useCollaboration } from '@/composables/useCollaboration'
 import { useAuthStore } from '@/stores/auth'
-import { useRecorder } from '@/composables/useRecorder'
 import type { Stem, Comment } from '@/data/dummyData'
-import type { Commit as Version } from '@/composables/useCollaboration' // Alias for compatibility
+import type { Take } from '@/composables/useCollaboration'
 
 const route = useRoute()
 const trackId = route.params.id as string
 
 // Use the collaboration composable
-const { versions, currentVersionId, stems, comments, connectedUsers, createNewVersion, switchVersion, addStem, addComment, updateStem, trackData } = useCollaboration(trackId)
+const { takes, currentTakeId, stems, comments, connectedUsers, isConnected, createNewTake, switchTake, addStem, addComment, updateStem, uploadAndAddStem, trackData } = useCollaboration(trackId)
 const auth = useAuthStore()
-const recorder = useRecorder()
 
 // File upload state
 const isUploading = ref(false)
@@ -33,9 +31,10 @@ if (auth.user?.username) {
     commentAuthor.value = auth.user.username
 }
 
-// Version state
-const showCommitDialog = ref(false)
-const commitMessage = ref('')
+// Take state
+const showTakeDialog = ref(false)
+const takeName = ref('')
+const takeDescription = ref('')
 
 // Master playback controls
 const isPlaying = ref(false)
@@ -65,37 +64,6 @@ const stopAll = () => {
     isPlaying.value = false
 }
 
-const handleRecord = async () => {
-    if (recorder.isRecording.value) {
-        recorder.stop()
-        // The rest of the logic (upload, etc.) will be handled by a watcher on recorder.audioBlob
-    } else {
-        await recorder.start()
-        if (!recorder.error.value) {
-            // Add a placeholder stem
-            const placeholderStem: Stem = {
-                id: `recording-${Date.now()}`,
-                name: 'New Recording...',
-                url: '', // No URL yet
-                duration: 0,
-                isMuted: false,
-                isSolo: false,
-                authorId: auth.user?.id,
-                isRecording: true, // Custom flag
-            }
-            addStem(placeholderStem)
-        } else {
-            alert(recorder.error.value)
-        }
-    }
-}
-
-// Watch for the recording to finish
-watch(() => recorder.audioBlob.value, (newBlob) => {
-    if (newBlob) {
-        uploadRecording(newBlob)
-    }
-})
 
 // Register stem refs
 const registerStem = (stemInstance: any) => {
@@ -140,23 +108,26 @@ const cancelComment = () => {
     commentText.value = ''
 }
 
-// Version handling
-const handleCreateNewCommit = () => {
-    commitMessage.value = ''
-    showCommitDialog.value = true
+// Take handling
+const handleCreateNewTake = () => {
+    takeName.value = ''
+    takeDescription.value = ''
+    showTakeDialog.value = true
 }
 
-const confirmNewCommit = () => {
-    if (commitMessage.value.trim()) {
-        createNewVersion(commitMessage.value.trim())
-        showCommitDialog.value = false
-        commitMessage.value = ''
+const confirmNewTake = () => {
+    if (takeName.value.trim() && takeDescription.value.trim()) {
+        createNewTake(takeName.value.trim(), takeDescription.value.trim())
+        showTakeDialog.value = false
+        takeName.value = ''
+        takeDescription.value = ''
     }
 }
 
-const cancelNewCommit = () => {
-    showCommitDialog.value = false
-    commitMessage.value = ''
+const cancelNewTake = () => {
+    showTakeDialog.value = false
+    takeName.value = ''
+    takeDescription.value = ''
 }
 
 // Handle file upload
@@ -166,114 +137,22 @@ const handleFileUpload = async (event: Event) => {
 
     if (!file) return
 
-    // Validate file type
-    const allowedTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/aiff', 'audio/aif']
-    if (!allowedTypes.includes(file.type)) {
-        alert('Please select a valid audio file (WAV, MP3, or AIFF)')
-        return
-    }
-
-    // Validate file size (max 100MB)
-    const maxSize = 100 * 1024 * 1024 // 100MB
-    if (file.size > maxSize) {
-        alert('File size must be less than 100MB')
-        return
-    }
-
     isUploading.value = true
     uploadProgress.value = 0
 
-    try {
-        // For development: Create a data URL from the file
-        // This allows wavesurfer.js to load the audio directly
-        const arrayBuffer = await file.arrayBuffer()
-        const blob = new Blob([arrayBuffer], { type: file.type })
-        const dataUrl = URL.createObjectURL(blob)
+    const result = await uploadAndAddStem(file)
 
-        console.log('Creating data URL for file:', file.name, 'Type:', file.type, 'Size:', file.size)
-
-        // Create stem object and add to collaboration
-        const stem: Stem = {
-            id: `stem-${Date.now()}-${Math.random().toString(36).substring(2)}`,
-            name: file.name,
-            url: dataUrl, // Use the data URL for development
-            duration: 0, // Will be updated when waveform is loaded
-            isMuted: false,
-            isSolo: false,
-            authorId: auth.user?.id,
-        }
-
-        // Add stem to the current version
-        addStem(stem)
-
+    if (result.success) {
         // Reset file input
         target.value = ''
-
-        console.log('File uploaded successfully:', stem)
-    } catch (error) {
-        console.error('Upload failed:', error)
-        alert('Upload failed. Please try again.')
-    } finally {
-        isUploading.value = false
-        uploadProgress.value = 0
+    } else {
+        alert(result.error)
     }
+
+    isUploading.value = false
+    uploadProgress.value = 0
 }
 
-const uploadRecording = async (blob: Blob) => {
-    isUploading.value = true
-    const recordingStem = stems.value.find(s => s.isRecording)
-    if (!recordingStem) {
-        console.error("Couldn't find placeholder stem for recording.")
-        isUploading.value = false
-        return
-    }
-
-    try {
-        const fileName = `recording-${Date.now()}.webm`
-        const fileType = 'audio/webm'
-
-        // 1. Get presigned upload URL from our API
-        const response = await fetch('/api/get-upload-url', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...auth.getAuthHeader(),
-            },
-            body: JSON.stringify({ fileName, fileType }),
-        })
-
-        if (!response.ok) throw new Error('Failed to get upload URL')
-        const { uploadUrl, fileKey } = await response.json()
-
-        // 2. Upload the audio blob to R2 using the presigned URL
-        const uploadResponse = await fetch(uploadUrl, {
-            method: 'PUT',
-            body: blob,
-            headers: {
-                'Content-Type': fileType,
-            },
-        })
-
-        if (!uploadResponse.ok) throw new Error('Upload to R2 failed')
-
-        // 3. Construct the final public URL (adjust if you have a custom domain)
-        const finalUrl = `https://rehearsal-stems.example.com/${fileKey}`
-
-        // 4. Update the placeholder stem with the final URL
-        updateStem(recordingStem.id, {
-            url: finalUrl,
-            name: `Rec ${new Date().toLocaleTimeString()}`,
-            isRecording: false,
-        })
-
-    } catch (error) {
-        console.error('Recording upload failed:', error)
-        alert('Failed to save recording. Please try again.')
-        // Here you might want to remove the placeholder stem
-    } finally {
-        isUploading.value = false
-    }
-}
 </script>
 
 <template>
@@ -281,14 +160,25 @@ const uploadRecording = async (blob: Blob) => {
         <!-- Header -->
         <TheHeader :users="connectedUsers" />
 
+        <!-- Connection Status -->
+        <div v-if="!isConnected" class="container mx-auto p-6">
+            <div class="flex items-center justify-center min-h-[400px]">
+                <div class="text-center">
+                    <div class="loading loading-spinner loading-lg mb-4"></div>
+                    <h2 class="text-xl font-semibold mb-2">Connecting to track...</h2>
+                    <p class="text-base-content/70">Setting up collaboration room</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Layout -->
-        <div class="container mx-auto p-6">
+        <div v-else class="container mx-auto p-6">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <!-- Central Column for Track -->
                 <div class="lg:col-span-3">
-                    <!-- Version Selector -->
-                    <CommitHistory :versions="versions" :current-version-id="currentVersionId"
-                        @switch-version="switchVersion" @create-new-version="handleCreateNewCommit" />
+                    <!-- Takes Explorer -->
+                    <TakesExplorer :takes="takes" :current-take-id="currentTakeId" @switch-take="switchTake"
+                        @create-new-take="handleCreateNewTake" />
 
                     <!-- Master Controls -->
                     <div class="master-controls bg-base-100 border border-base-300 rounded-lg p-4 mb-6">
@@ -309,14 +199,6 @@ const uploadRecording = async (blob: Blob) => {
                                         d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" />
                                 </svg>
                                 Stop All
-                            </button>
-                            <div class="divider divider-horizontal"></div>
-                            <button @click="handleRecord" class="btn btn-error"
-                                :class="{ 'btn-outline': !recorder.isRecording.value }">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <circle cx="10" cy="10" r="6" />
-                                </svg>
-                                {{ recorder.isRecording.value ? 'Stop' : 'Record' }}
                             </button>
                             <div class="text-sm text-base-content/70">
                                 {{ stems.length }} stem{{ stems.length !== 1 ? 's' : '' }}
@@ -341,8 +223,8 @@ const uploadRecording = async (blob: Blob) => {
 
                     <!-- Stems -->
                     <div class="stems-container">
-                        <WaveformStem v-for="stem in stems" :key="stem.id" :stem="stem" @mounted="registerStem"
-                            @unmounted="unregisterStem" @add-comment="handleAddComment" />
+                        <WaveformStem v-for="stem in stems" :key="stem.id" :stem="stem" :comments="comments"
+                            @mounted="registerStem" @unmounted="unregisterStem" @add-comment="handleAddComment" />
                     </div>
                 </div>
 
@@ -385,30 +267,63 @@ const uploadRecording = async (blob: Blob) => {
             </div>
         </div>
 
-        <!-- Version Dialog -->
-        <div v-if="showCommitDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div class="bg-base-100 rounded-lg p-6 w-full max-w-md mx-4">
-                <h3 class="font-semibold text-lg mb-4">Create New Commit</h3>
+        <!-- Take Dialog -->
+        <div v-if="showTakeDialog"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div class="bg-base-100 rounded-lg p-6 w-full max-w-md mx-4 shadow-2xl border border-base-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-lg">Save as New Take</h3>
+                        <p class="text-sm text-base-content/70">Capture this moment in your creative journey</p>
+                    </div>
+                </div>
 
                 <div class="mb-4">
-                    <p class="text-sm text-base-content/70 mb-3">
-                        This will save a snapshot of the current track state.
-                    </p>
-                    <label class="block text-sm font-medium mb-2">Commit Message:</label>
-                    <input v-model="commitMessage" class="input input-bordered w-full"
-                        placeholder="e.g., Added bassline harmonies" @keydown.enter="confirmNewCommit"
-                        @keydown.escape="cancelNewCommit">
+                    <label class="block text-sm font-medium mb-2">Take Name:</label>
+                    <input v-model="takeName" class="input input-bordered w-full focus:input-primary"
+                        placeholder="e.g., Take 2, Chorus Version, Final Mix" autofocus @keydown.enter="confirmNewTake"
+                        @keydown.escape="cancelNewTake">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Describe this Take:</label>
+                    <textarea v-model="takeDescription" class="textarea textarea-bordered w-full focus:textarea-primary"
+                        placeholder="What makes this take special? What did you change or try?"
+                        @keydown.enter.ctrl="confirmNewTake" @keydown.escape="cancelNewTake" rows="3">
+                    </textarea>
+                </div>
+
+                <!-- Current state preview -->
+                <div class="mb-4 p-3 bg-base-200 rounded-lg">
+                    <div class="text-xs text-base-content/60 mb-2">Current state:</div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="badge badge-sm badge-outline">{{ stems.length }} stem{{ stems.length !== 1 ? 's' :
+                            '' }}</span>
+                        <span class="badge badge-sm badge-outline">{{ comments.length }} comment{{ comments.length !== 1
+                            ? 's' : '' }}</span>
+                    </div>
                 </div>
 
                 <div class="flex gap-2 justify-end">
-                    <button @click="cancelNewCommit" class="btn btn-outline btn-sm">Cancel</button>
-                    <button @click="confirmNewCommit" class="btn btn-primary btn-sm" :disabled="!commitMessage.trim()">
-                        Create Commit
+                    <button @click="cancelNewTake" class="btn btn-outline btn-sm">Cancel</button>
+                    <button @click="confirmNewTake" class="btn btn-primary btn-sm"
+                        :disabled="!takeName.trim() || !takeDescription.trim()">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                            </path>
+                        </svg>
+                        Save as New Take
                     </button>
                 </div>
 
-                <div class="text-xs text-base-content/60 mt-2">
-                    Press Enter to create, or Escape to cancel
+                <div class="text-xs text-base-content/60 mt-3 text-center">
+                    Press Ctrl+Enter to save, or Escape to cancel
                 </div>
             </div>
         </div>

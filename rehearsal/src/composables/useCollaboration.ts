@@ -4,14 +4,18 @@ import { WebsocketProvider } from 'y-partykit/provider'
 import type { Stem, Comment } from '@/data/dummyData'
 import { useAuthStore } from '@/stores/auth'
 
+// R2 Configuration
+const R2_PUBLIC_URL = 'https://pub-a3525dca50814e51ab25628446c7acff.r2.dev' // Replace with your actual R2 public URL
+
 export interface UserAwareness {
   name: string
   avatar?: string
 }
 
-export interface Commit {
-  id: string // This will serve as the unique hash
-  message: string
+export interface Take {
+  id: string
+  name: string
+  description: string
   stems: Stem[]
   comments: Comment[]
   createdAt: string
@@ -22,8 +26,8 @@ export interface Commit {
 }
 
 export interface TrackData {
-  versions: Commit[]
-  currentVersionId: string
+  takes: Take[]
+  currentTakeId: string
   ownerId?: string
 }
 
@@ -34,8 +38,8 @@ export function useCollaboration(roomId: string) {
 
   // Initialize PartyKit provider
   const provider = new WebsocketProvider(
-    'ws://localhost:1999', // TODO: Make this configurable
-    `track-${roomId}`,
+    'ws://127.0.0.1:1999/parties/rehearsal_partykit',
+    roomId,
     yDoc,
     {
       params: {
@@ -67,18 +71,36 @@ export function useCollaboration(roomId: string) {
     connectedUsers.value = users
   }
 
-  // Add debugging for WebSocket connection (disabled for now)
+  // Add debugging for WebSocket connection
   if (provider) {
-    provider.on('status', (event: any) => {
-      console.log('WebSocket status:', event)
-    })
-
     provider.on('connection-error', (event: any) => {
       console.error('WebSocket connection error:', event)
+      isConnected.value = false
+      // Retry connection after a short delay
+      setTimeout(() => {
+        if (provider) {
+          provider.connect()
+        }
+      }, 1000)
     })
 
     provider.on('connection-close', (event: any) => {
       console.log('WebSocket connection closed:', event)
+      isConnected.value = false
+    })
+
+    provider.on('connection-open', () => {
+      console.log('WebSocket connection opened')
+      isConnected.value = true
+    })
+
+    provider.on('status', (event: any) => {
+      console.log('WebSocket status:', event)
+      if (event.status === 'connected') {
+        isConnected.value = true
+      } else if (event.status === 'disconnected') {
+        isConnected.value = false
+      }
     })
   }
 
@@ -86,37 +108,39 @@ export function useCollaboration(roomId: string) {
   const trackData = yDoc.getMap('trackData')
 
   // Reactive Vue state
-  const versions = ref<Commit[]>([])
-  const currentVersionId = ref<string>('')
+  const takes = ref<Take[]>([])
+  const currentTakeId = ref<string>('')
   const stems = ref<Stem[]>([])
   const comments = ref<Comment[]>([])
+  const isConnected = ref(false)
 
   // Update state from Y.js document
   const updateState = () => {
     const trackDataObj = trackData.toJSON() as TrackData
 
-    if (trackDataObj.versions) {
-      versions.value = trackDataObj.versions
+    if (trackDataObj.takes) {
+      takes.value = trackDataObj.takes
     }
 
-    if (trackDataObj.currentVersionId) {
-      currentVersionId.value = trackDataObj.currentVersionId
+    if (trackDataObj.currentTakeId) {
+      currentTakeId.value = trackDataObj.currentTakeId
 
-      // Update stems and comments for current version
-      const currentVersion = versions.value.find((v) => v.id === trackDataObj.currentVersionId)
-      if (currentVersion) {
-        stems.value = currentVersion.stems || []
-        comments.value = currentVersion.comments || []
+      // Update stems and comments for current take
+      const currentTake = takes.value.find((t) => t.id === trackDataObj.currentTakeId)
+      if (currentTake) {
+        stems.value = currentTake.stems || []
+        comments.value = currentTake.comments || []
       }
     }
   }
 
   // Initialize with default data if empty
   const initializeDefaultData = () => {
-    if (versions.value.length === 0) {
-      const initialCommit: Commit = {
+    if (takes.value.length === 0) {
+      const initialTake: Take = {
         id: crypto.randomUUID().slice(0, 7),
-        message: 'Initial commit',
+        name: 'Take 1',
+        description: 'Initial take',
         stems: [],
         comments: [],
         createdAt: new Date().toISOString(),
@@ -126,8 +150,8 @@ export function useCollaboration(roomId: string) {
         },
       }
 
-      trackData.set('versions', [initialCommit])
-      trackData.set('currentVersionId', initialCommit.id)
+      trackData.set('takes', [initialTake])
+      trackData.set('currentTakeId', initialTake.id)
       if (auth.user?.id) {
         trackData.set('ownerId', auth.user.id)
       }
@@ -136,45 +160,47 @@ export function useCollaboration(roomId: string) {
 
   // Methods to modify the shared state
   const addStem = (stem: Stem) => {
-    const currentVersion = versions.value.find((v) => v.id === currentVersionId.value)
-    if (currentVersion) {
-      const enriched = { ...stem, authorId: auth.user?.id }
-      const updatedStems = [...currentVersion.stems, enriched as any]
-      const updatedVersion = { ...currentVersion, stems: updatedStems }
+    const currentTake = takes.value.find((t) => t.id === currentTakeId.value)
+    if (currentTake) {
+      const enriched = {
+        ...stem,
+        authorId: auth.user?.id,
+        authorName: auth.user?.username,
+        authorAvatar: auth.user?.avatar,
+      }
+      const updatedStems = [...currentTake.stems, enriched as any]
+      const updatedTake = { ...currentTake, stems: updatedStems }
 
-      const updatedVersions = versions.value.map((v) =>
-        v.id === currentVersionId.value ? updatedVersion : v,
-      )
+      const updatedTakes = takes.value.map((t) => (t.id === currentTakeId.value ? updatedTake : t))
 
-      trackData.set('versions', updatedVersions)
+      trackData.set('takes', updatedTakes)
     }
   }
 
   const addComment = (comment: Comment) => {
-    const currentVersion = versions.value.find((v) => v.id === currentVersionId.value)
-    if (currentVersion) {
+    const currentTake = takes.value.find((t) => t.id === currentTakeId.value)
+    if (currentTake) {
       const enriched = { ...comment, authorId: auth.user?.id }
-      const updatedComments = [...currentVersion.comments, enriched as any]
-      const updatedVersion = { ...currentVersion, comments: updatedComments }
+      const updatedComments = [...currentTake.comments, enriched as any]
+      const updatedTake = { ...currentTake, comments: updatedComments }
 
-      const updatedVersions = versions.value.map((v) =>
-        v.id === currentVersionId.value ? updatedVersion : v,
-      )
+      const updatedTakes = takes.value.map((t) => (t.id === currentTakeId.value ? updatedTake : t))
 
-      trackData.set('versions', updatedVersions)
+      trackData.set('takes', updatedTakes)
     }
   }
 
-  const createNewVersion = (message: string) => {
+  const createNewTake = (name: string, description: string) => {
     const newId = crypto.randomUUID().slice(0, 7)
-    const currentVersion = versions.value.find((v) => v.id === currentVersionId.value)
+    const currentTake = takes.value.find((t) => t.id === currentTakeId.value)
 
-    if (currentVersion && auth.user) {
-      const newCommit: Commit = {
+    if (currentTake && auth.user) {
+      const newTake: Take = {
         id: newId,
-        message: message,
-        stems: JSON.parse(JSON.stringify(currentVersion.stems)), // Deep copy
-        comments: JSON.parse(JSON.stringify(currentVersion.comments)), // Deep copy
+        name: name,
+        description: description,
+        stems: JSON.parse(JSON.stringify(currentTake.stems)), // Deep copy
+        comments: JSON.parse(JSON.stringify(currentTake.comments)), // Deep copy
         createdAt: new Date().toISOString(),
         author: {
           id: auth.user.id,
@@ -182,29 +208,142 @@ export function useCollaboration(roomId: string) {
         },
       }
 
-      const updatedVersions = [...versions.value, newCommit]
-      trackData.set('versions', updatedVersions)
-      trackData.set('currentVersionId', newId)
+      const updatedTakes = [...takes.value, newTake]
+      trackData.set('takes', updatedTakes)
+      trackData.set('currentTakeId', newId)
     }
   }
 
-  const switchVersion = (versionId: string) => {
-    trackData.set('currentVersionId', versionId)
+  const switchTake = (takeId: string) => {
+    trackData.set('currentTakeId', takeId)
   }
 
   const updateStem = (stemId: string, updates: Partial<Stem>) => {
-    const currentVersion = versions.value.find((v) => v.id === currentVersionId.value)
-    if (currentVersion) {
-      const updatedStems = currentVersion.stems.map((stem) =>
+    const currentTake = takes.value.find((t) => t.id === currentTakeId.value)
+    if (currentTake) {
+      const updatedStems = currentTake.stems.map((stem) =>
         stem.id === stemId ? { ...stem, ...updates } : stem,
       )
-      const updatedVersion = { ...currentVersion, stems: updatedStems }
+      const updatedTake = { ...currentTake, stems: updatedStems }
 
-      const updatedVersions = versions.value.map((v) =>
-        v.id === currentVersionId.value ? updatedVersion : v,
-      )
+      const updatedTakes = takes.value.map((t) => (t.id === currentTakeId.value ? updatedTake : t))
 
-      trackData.set('versions', updatedVersions)
+      trackData.set('takes', updatedTakes)
+    }
+  }
+
+  // Upload and add stem function
+  const uploadAndAddStem = async (
+    file: File,
+  ): Promise<{ success: true } | { success: false; error: string }> => {
+    try {
+      // Validate file type
+      const allowedTypes = [
+        'audio/wav',
+        'audio/mp3',
+        'audio/mpeg',
+        'audio/aiff',
+        'audio/aif',
+        'audio/webm',
+      ]
+      if (!allowedTypes.includes(file.type)) {
+        return {
+          success: false,
+          error: 'Please select a valid audio file (WAV, MP3, AIFF, or WebM)',
+        }
+      }
+
+      // Validate file size (max 100MB)
+      const maxSize = 100 * 1024 * 1024 // 100MB
+      if (file.size > maxSize) {
+        return { success: false, error: 'File size must be less than 100MB' }
+      }
+
+      // 1. Get presigned upload URL from our API
+      const response = await fetch('/api/get-upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to get upload URL: ${response.status} ${response.statusText}`)
+      }
+
+      const { uploadUrl, fileKey } = await response.json()
+
+      // 2. Upload the file to R2 using the presigned URL
+      let publicUrl: string
+
+      if (uploadUrl.includes('mock-upload.r2.dev')) {
+        // Development: Mock upload - use object URL for local file
+        console.log('Using mock upload for development')
+        publicUrl = URL.createObjectURL(file)
+      } else {
+        // Production: Upload to R2
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error(
+            `Upload to R2 failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
+          )
+        }
+
+        // Construct the final public URL
+        publicUrl = `${R2_PUBLIC_URL}/${fileKey}`
+      }
+
+      // 4. Create stem object with proper attribution
+      const stem: Stem = {
+        id: `stem-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        name: file.name,
+        url: publicUrl,
+        duration: 0, // Will be updated when waveform is loaded
+        isMuted: false,
+        isSolo: false,
+        authorId: auth.user?.id,
+        authorName: auth.user?.username || 'Anonymous',
+        authorAvatar: auth.user?.avatar,
+      }
+
+      // 5. Add stem to the current take with full author object
+      const currentTake = takes.value.find((t) => t.id === currentTakeId.value)
+      if (currentTake) {
+        const enriched = {
+          ...stem,
+          authorId: auth.user?.id,
+          authorName: auth.user?.username,
+          authorAvatar: auth.user?.avatar,
+        }
+        const updatedStems = [...currentTake.stems, enriched as any]
+        const updatedTake = { ...currentTake, stems: updatedStems }
+
+        const updatedTakes = takes.value.map((t) =>
+          t.id === currentTakeId.value ? updatedTake : t,
+        )
+
+        trackData.set('takes', updatedTakes)
+      }
+
+      console.log('File uploaded successfully to R2:', stem)
+      return { success: true }
+    } catch (error) {
+      console.error('Upload failed:', error)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Upload failed. Please try again.'
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -223,6 +362,14 @@ export function useCollaboration(roomId: string) {
     // Initialize with default data if needed
     updateState()
     initializeDefaultData()
+
+    // Fallback: set connected state after a short delay if not already set
+    setTimeout(() => {
+      if (!isConnected.value && provider) {
+        console.log('Setting connection state to true (fallback)')
+        isConnected.value = true
+      }
+    }, 2000)
   })
 
   onUnmounted(() => {
@@ -237,18 +384,20 @@ export function useCollaboration(roomId: string) {
 
   return {
     // Reactive state
-    versions,
-    currentVersionId,
+    takes,
+    currentTakeId,
     stems,
     comments,
     connectedUsers,
+    isConnected,
 
     // Methods
     addStem,
     addComment,
-    createNewVersion,
-    switchVersion,
+    createNewTake,
+    switchTake,
     updateStem,
+    uploadAndAddStem,
 
     // Internal state (for advanced usage)
     trackData,

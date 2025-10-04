@@ -5,27 +5,28 @@ import { verifyJwt } from './auth'
 export default class YjsServer implements Party.Server {
   constructor(public room: Party.Room) {}
 
-  async onConnect(conn: Party.Connection) {
+  async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
     const token = new URL(conn.uri).searchParams.get('token')
     if (!token) {
-      console.log('Connection rejected: Missing token')
-      return conn.close(1002, 'Authentication failed')
+      conn.close(1002, 'Authentication failed')
+      return
     }
 
     try {
       const payload = await verifyJwt(this.room.env.JWT_SECRET as string, token)
       if (!payload) {
-        console.log('Connection rejected: Invalid token')
-        return conn.close(1002, 'Authentication failed')
+        conn.close(1002, 'Authentication failed')
+        return
       }
-      // You can attach the user info to the connection for later use
-      // conn.setState({ user: { id: payload.sub, username: payload.username } });
+
+      // Set user state on the connection
+      conn.setState({ user: { id: payload.sub, username: payload.username } })
     } catch (err) {
       console.error('Token verification error:', err)
-      return conn.close(1002, 'Authentication failed')
+      conn.close(1002, 'Authentication failed')
+      return
     }
 
-    console.log('Authenticated connection established for room:', this.room.id)
     return onConnect(conn, this.room, {
       // Persistence can be enabled by setting the `persist` option
       // persist: true,

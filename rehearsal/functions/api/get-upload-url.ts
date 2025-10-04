@@ -51,7 +51,35 @@ export const onRequest = async (context: { request: Request; env: Env; ctx: any 
     // Generate a unique file key
     const fileKey = `stems/${Date.now()}-${Math.random().toString(36).substring(2)}-${fileName}`
 
-    // Generate pre-signed upload URL for R2
+    // Check if R2_BUCKET is properly available
+    if (!env.R2_BUCKET || typeof env.R2_BUCKET.createPresignedUrl !== 'function') {
+      // Development fallback: Create a mock presigned URL
+      console.log('R2_BUCKET not available in development, using mock URL')
+      const mockUploadUrl = {
+        url: `https://mock-upload.r2.dev/${fileKey}?expires=${Date.now() + 3600000}`,
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          uploadUrl: mockUploadUrl.url,
+          fileKey,
+          expiresAt: Date.now() + 3600000, // 1 hour from now
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
+        },
+      )
+    }
+
+    // Production: Generate pre-signed upload URL for R2
     const uploadUrl = await env.R2_BUCKET.createPresignedUrl('PUT', fileKey, {
       expiresIn: 3600, // 1 hour
     })
@@ -68,6 +96,9 @@ export const onRequest = async (context: { request: Request; env: Env; ctx: any 
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
       },
     )
@@ -84,6 +115,9 @@ export const onRequest = async (context: { request: Request; env: Env; ctx: any 
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
       },
     )

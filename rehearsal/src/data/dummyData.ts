@@ -1,3 +1,4 @@
+// Updated Stem interface with author attribution
 export interface Stem {
   id: string
   name: string
@@ -6,6 +7,8 @@ export interface Stem {
   isMuted: boolean
   isSolo: boolean
   authorId?: string
+  authorName?: string
+  authorAvatar?: string
   isRecording?: boolean
 }
 

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watchEffect, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watchEffect, nextTick, computed } from 'vue'
 import WaveSurfer from 'wavesurfer.js'
-import type { Stem } from '@/data/dummyData'
+import type { Stem, Comment } from '@/data/dummyData'
 
 interface Props {
     stem: Stem
+    comments?: Comment[]
 }
 
 const props = defineProps<Props>()
@@ -24,6 +25,21 @@ const emit = defineEmits<{
     unmounted: [instance: any]
     'add-comment': [timestamp: number, stemId: string]
 }>()
+
+// Computed properties for comment markers
+const commentMarkers = computed(() => {
+    if (!props.comments || !wavesurfer) return []
+
+    const duration = wavesurfer.getDuration()
+    if (duration <= 0) return []
+
+    return props.comments
+        .filter(comment => comment.timestamp <= duration)
+        .map(comment => ({
+            ...comment,
+            position: (comment.timestamp / duration) * 100
+        }))
+})
 
 // Initialize wavesurfer in onMounted
 onMounted(async () => {
@@ -216,6 +232,29 @@ const toggleSolo = () => {
         <!-- Waveform container -->
         <div ref="waveformEl" class="w-full h-24 bg-base-200 rounded border relative">
             <!-- WaveSurfer.js will be rendered here -->
+
+            <!-- Comment markers -->
+            <div v-for="marker in commentMarkers" :key="marker.id"
+                class="absolute top-0 bottom-0 w-0.5 bg-primary/60 hover:bg-primary transition-colors cursor-pointer group"
+                :style="{ left: `${marker.position}%` }" :title="`${marker.author}: ${marker.text}`">
+                <!-- Comment marker dot -->
+                <div
+                    class="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-base-100 shadow-sm group-hover:scale-110 transition-transform">
+                </div>
+                <!-- Comment preview on hover -->
+                <div
+                    class="absolute top-0 left-2 bg-base-100 border border-base-300 rounded-lg p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 min-w-48 max-w-64">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-4 h-4 bg-primary/20 rounded-full flex items-center justify-center">
+                            <span class="text-xs font-medium text-primary">{{ marker.author.charAt(0).toUpperCase()
+                                }}</span>
+                        </div>
+                        <span class="text-xs font-medium">{{ marker.author }}</span>
+                        <span class="text-xs text-base-content/60">{{ marker.timestamp.toFixed(1) }}s</span>
+                    </div>
+                    <p class="text-xs text-base-content/80">{{ marker.text }}</p>
+                </div>
+            </div>
 
             <!-- Loading state -->
             <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-base-200/80">
