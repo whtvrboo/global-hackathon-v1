@@ -1,12 +1,12 @@
 -- Add profile customization fields to users table
-ALTER TABLE users ADD COLUMN favorite_book_ids TEXT[] DEFAULT '{}';
-ALTER TABLE users ADD COLUMN banner_url TEXT;
-ALTER TABLE users ADD COLUMN bio TEXT;
-ALTER TABLE users ADD COLUMN reading_goal INTEGER DEFAULT 0;
-ALTER TABLE users ADD COLUMN reading_goal_year INTEGER DEFAULT EXTRACT(YEAR FROM NOW());
+ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_book_ids TEXT[] DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reading_goal INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reading_goal_year INTEGER DEFAULT EXTRACT(YEAR FROM NOW());
 
 -- Create user_reading_stats table for advanced analytics
-CREATE TABLE user_reading_stats (
+CREATE TABLE IF NOT EXISTS user_reading_stats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     year INTEGER NOT NULL,
@@ -20,8 +20,8 @@ CREATE TABLE user_reading_stats (
 );
 
 -- Create indexes
-CREATE INDEX idx_user_reading_stats_user_id ON user_reading_stats(user_id);
-CREATE INDEX idx_user_reading_stats_year_month ON user_reading_stats(year, month);
+CREATE INDEX IF NOT EXISTS idx_user_reading_stats_user_id ON user_reading_stats(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_reading_stats_year_month ON user_reading_stats(year, month);
 
 -- Create function to update reading stats when a log is created/updated
 CREATE OR REPLACE FUNCTION update_user_reading_stats()
@@ -58,6 +58,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for reading stats
+DROP TRIGGER IF EXISTS trigger_update_user_reading_stats ON logs;
 CREATE TRIGGER trigger_update_user_reading_stats
     AFTER INSERT OR UPDATE ON logs
     FOR EACH ROW EXECUTE FUNCTION update_user_reading_stats();

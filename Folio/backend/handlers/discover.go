@@ -324,7 +324,7 @@ func (h *DiscoverHandler) extractKeywordsFromReview(review string) []string {
 		"this": true, "that": true, "these": true, "those": true, "i": true, "you": true,
 		"he": true, "she": true, "it": true, "we": true, "they": true, "me": true,
 		"him": true, "her": true, "us": true, "them": true, "my": true, "your": true,
-		"his": true, "her": true, "its": true, "our": true, "their": true,
+		"his": true, "its": true, "our": true, "their": true,
 	}
 	
 	// Split into words and filter

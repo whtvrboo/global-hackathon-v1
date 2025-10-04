@@ -121,8 +121,10 @@ func setupRoutes(e *echo.Echo, app *App) {
 	// Protected endpoints
 	protected := api.Group("", auth.JWTMiddleware)
 	protected.GET("/me", authHandler.GetMe)
+	protected.PUT("/me/profile", authHandler.UpdateProfile)
 	protected.GET("/guest/me", guestHandler.GetGuestUser)
 	protected.POST("/logs", logHandler.CreateLog)
+	protected.GET("/logs/:id", logHandler.GetSingleLog)
 	protected.GET("/users/:username/logs", logHandler.GetUserLogs)
 	protected.GET("/feed", logHandler.GetFeed)
 	protected.POST("/users/:username/follow", socialHandler.FollowUser)

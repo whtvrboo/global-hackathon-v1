@@ -64,7 +64,10 @@
                 </span>
               </div>
               <p class="text-body text-dark-300 mb-4">@{{ user.username }}</p>
-              <p v-if="user.bio" class="text-body text-dark-200">{{ user.bio }}</p>
+              <p v-if="user.bio" class="text-body text-dark-200 mb-4">{{ user.bio }}</p>
+              <button @click="showEditProfile = true" class="btn-secondary text-sm">
+                ✏️ Edit Profile
+              </button>
             </div>
           </div>
 
@@ -372,6 +375,10 @@
         </router-link>
       </div>
     </nav>
+
+    <!-- Profile Edit Modal -->
+    <ProfileEditModal :show="showEditProfile" :current-user="user" :user-logs="logs" @close="showEditProfile = false"
+      @updated="refreshProfile" />
   </div>
 </template>
 
@@ -383,6 +390,7 @@ import Card from '../components/ui/Card.vue'
 import BookCard from '../components/BookCard.vue'
 import PrimaryButton from '../components/ui/PrimaryButton.vue'
 import ListManager from '../components/ListManager.vue'
+import ProfileEditModal from '../components/ProfileEditModal.vue'
 
 const authStore = useAuthStore()
 
@@ -393,6 +401,7 @@ const loading = ref(true)
 const currentTab = ref('all')
 const selectedBook = ref(null)
 const viewMode = ref('grid')
+const showEditProfile = ref(false)
 
 const tabs = [
   { label: 'All', value: 'all' },
@@ -522,6 +531,26 @@ onMounted(async () => {
 
 const showBookDetail = (book) => {
   selectedBook.value = book
-  showBookDetailModal.value = true
+  // showBookDetailModal.value = true // BookDetailModal may not exist yet
+}
+
+const refreshProfile = async () => {
+  try {
+    // Refresh user data from API
+    const response = await axios.get('/api/me')
+    user.value = response.data
+    authStore.setUser(response.data)
+
+    // Reload favorite books based on updated favorite_book_ids
+    if (user.value.favorite_book_ids?.length > 0 && logs.value.length > 0) {
+      favoriteBooks.value = logs.value
+        .filter(log => user.value.favorite_book_ids.includes(log.book_id))
+        .map(log => log.book)
+        .filter(book => book)
+        .slice(0, 4)
+    }
+  } catch (error) {
+    console.error('Error refreshing profile:', error)
+  }
 }
 </script>

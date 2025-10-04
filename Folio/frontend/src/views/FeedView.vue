@@ -118,9 +118,10 @@
                                     </button>
                                 </div>
 
-                                <!-- Review Content -->
+                                <!-- Review Content (clickable to open full review) -->
                                 <div v-if="!item.spoiler_flag || showSpoilers[item.id]"
-                                    class="text-body leading-relaxed">
+                                    @click="openReviewDetail(item.id)"
+                                    class="text-body leading-relaxed cursor-pointer hover:text-white transition-colors line-clamp-4">
                                     {{ item.review }}
                                 </div>
 
@@ -129,6 +130,12 @@
                                     @click="toggleSpoiler(item.id)">
                                     {{ item.review }}
                                 </div>
+
+                                <!-- Read More Link -->
+                                <button @click="openReviewDetail(item.id)"
+                                    class="text-accent-blue text-sm mt-2 hover:underline">
+                                    Read full review →
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -144,7 +151,7 @@
                             </svg>
                             <span class="text-sm">Comment</span>
                             <span v-if="item.comments_count > 0" class="text-xs text-dark-400">({{ item.comments_count
-                                }})</span>
+                            }})</span>
                         </button>
                         <button @click="toggleLike(item.id)" class="flex items-center gap-2 transition-colors"
                             :class="item.is_liked ? 'text-accent-red' : 'text-dark-400 hover:text-accent-red'">
@@ -156,7 +163,7 @@
                             </svg>
                             <span class="text-sm">{{ item.is_liked ? 'Liked' : 'Like' }}</span>
                             <span v-if="item.likes_count > 0" class="text-xs text-dark-400">({{ item.likes_count
-                                }})</span>
+                            }})</span>
                         </button>
                     </div>
 
@@ -204,7 +211,7 @@
                                     <div class="flex items-center justify-between mb-1">
                                         <div class="flex items-center gap-2">
                                             <span class="font-semibold text-white text-sm">{{ comment.user.name
-                                            }}</span>
+                                                }}</span>
                                             <span class="text-xs text-dark-400">@{{ comment.user.username }}</span>
                                             <span class="text-xs text-dark-500">•</span>
                                             <span class="text-xs text-dark-400">{{ timeAgo(comment.created_at) }}</span>
@@ -300,6 +307,10 @@
                 </router-link>
             </div>
         </nav>
+
+        <!-- Review Detail Modal -->
+        <ReviewDetailModal :show="showReviewModal" :log-id="selectedLogId" @close="showReviewModal = false"
+            @updated="handleReviewUpdated" />
     </div>
 </template>
 
@@ -310,6 +321,7 @@ import axios from 'axios'
 import Card from '../components/ui/Card.vue'
 import PrimaryButton from '../components/ui/PrimaryButton.vue'
 import { useToastStore } from '../stores/toast'
+import ReviewDetailModal from '../components/ReviewDetailModal.vue'
 
 const authStore = useAuthStore()
 
@@ -321,6 +333,8 @@ const commentInputs = reactive({})
 const loadingComments = reactive({})
 const submittingComment = reactive({})
 const showSpoilers = reactive({})
+const showReviewModal = ref(false)
+const selectedLogId = ref(null)
 const toastStore = useToastStore()
 
 const statusLabel = (status) => {
@@ -473,6 +487,21 @@ const deleteComment = async (logId, commentId) => {
 
 const toggleSpoiler = (logId) => {
     showSpoilers[logId] = !showSpoilers[logId]
+}
+
+const openReviewDetail = (logId) => {
+    selectedLogId.value = logId
+    showReviewModal.value = true
+}
+
+const handleReviewUpdated = async () => {
+    // Refresh the feed to get updated counts
+    try {
+        const response = await axios.get('/api/feed')
+        feed.value = response.data.feed || []
+    } catch (error) {
+        console.error('Error refreshing feed:', error)
+    }
 }
 
 onMounted(async () => {

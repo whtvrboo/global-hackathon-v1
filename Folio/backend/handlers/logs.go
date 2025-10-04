@@ -15,14 +15,15 @@ type LogHandler struct {
 }
 
 type CreateLogRequest struct {
-	BookID     string  `json:"book_id"`
-	Status     string  `json:"status"`
-	Rating     *int    `json:"rating"`
-	Review     *string `json:"review"`
-	Notes      *string `json:"notes"`
-	StartDate  *string `json:"start_date"`
-	FinishDate *string `json:"finish_date"`
-	IsPublic   *bool   `json:"is_public"`
+	BookID      string  `json:"book_id"`
+	Status      string  `json:"status"`
+	Rating      *int    `json:"rating"`
+	Review      *string `json:"review"`
+	Notes       *string `json:"notes"`
+	StartDate   *string `json:"start_date"`
+	FinishDate  *string `json:"finish_date"`
+	IsPublic    *bool   `json:"is_public"`
+	SpoilerFlag *bool   `json:"spoiler_flag"`
 }
 
 // CreateLog creates a new reading log entry
@@ -58,8 +59,8 @@ func (h *LogHandler) CreateLog(c echo.Context) error {
 	defer cancel()
 
 	query := `
-		INSERT INTO logs (user_id, book_id, status, rating, review, notes, start_date, finish_date, is_public, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+		INSERT INTO logs (user_id, book_id, status, rating, review, notes, start_date, finish_date, is_public, spoiler_flag, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
@@ -68,12 +69,17 @@ func (h *LogHandler) CreateLog(c echo.Context) error {
 		isPublic = *req.IsPublic
 	}
 
+	spoilerFlag := false
+	if req.SpoilerFlag != nil {
+		spoilerFlag = *req.SpoilerFlag
+	}
+
 	var logID string
 	var createdAt, updatedAt time.Time
 
 	err := h.DB.QueryRow(ctx, query,
 		userID, req.BookID, req.Status, req.Rating, req.Review,
-		req.Notes, req.StartDate, req.FinishDate, isPublic,
+		req.Notes, req.StartDate, req.FinishDate, isPublic, spoilerFlag,
 	).Scan(&logID, &createdAt, &updatedAt)
 
 	if err != nil {
@@ -356,6 +362,114 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"feed":  feed,
 		"count": len(feed),
+	})
+}
+
+// GetSingleLog retrieves a specific log with full details for dedicated review view
+func (h *LogHandler) GetSingleLog(c echo.Context) error {
+	logID := c.Param("id")
+	if logID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "log_id is required",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	currentUserID := auth.GetUserID(c)
+
+	query := `
+		SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
+		       l.notes, l.start_date, l.finish_date, l.is_public, l.spoiler_flag, l.created_at,
+		       l.likes_count, l.comments_count,
+		       u.username, u.name, u.picture,
+		       b.title, b.authors, b.cover_url, b.description, b.pages, b.published_date,
+		       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $2) as is_liked
+		FROM logs l
+		JOIN users u ON l.user_id = u.id
+		JOIN books b ON l.book_id = b.id
+		WHERE l.id = $1
+	`
+
+	var log struct {
+		ID            string
+		UserID        string
+		BookID        string
+		Status        string
+		Rating        *int
+		Review        *string
+		Notes         *string
+		StartDate     *string
+		FinishDate    *string
+		IsPublic      bool
+		SpoilerFlag   bool
+		CreatedAt     time.Time
+		LikesCount    int
+		CommentsCount int
+		Username      string
+		Name          string
+		Picture       *string
+		BookTitle     string
+		Authors       []string
+		CoverURL      *string
+		Description   *string
+		Pages         *int
+		PublishedDate *string
+		IsLiked       bool
+	}
+
+	err := h.DB.QueryRow(ctx, query, logID, currentUserID).Scan(
+		&log.ID, &log.UserID, &log.BookID, &log.Status, &log.Rating, &log.Review,
+		&log.Notes, &log.StartDate, &log.FinishDate, &log.IsPublic, &log.SpoilerFlag, &log.CreatedAt,
+		&log.LikesCount, &log.CommentsCount,
+		&log.Username, &log.Name, &log.Picture,
+		&log.BookTitle, &log.Authors, &log.CoverURL, &log.Description, &log.Pages, &log.PublishedDate,
+		&log.IsLiked,
+	)
+
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "log not found",
+		})
+	}
+
+	// Check visibility
+	if !log.IsPublic && currentUserID != log.UserID {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error": "you don't have permission to view this log",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"id":             log.ID,
+		"status":         log.Status,
+		"rating":         log.Rating,
+		"review":         log.Review,
+		"notes":          log.Notes,
+		"start_date":     log.StartDate,
+		"finish_date":    log.FinishDate,
+		"is_public":      log.IsPublic,
+		"spoiler_flag":   log.SpoilerFlag,
+		"created_at":     log.CreatedAt,
+		"likes_count":    log.LikesCount,
+		"comments_count": log.CommentsCount,
+		"is_liked":       log.IsLiked,
+		"user": map[string]interface{}{
+			"id":       log.UserID,
+			"username": log.Username,
+			"name":     log.Name,
+			"picture":  log.Picture,
+		},
+		"book": map[string]interface{}{
+			"id":             log.BookID,
+			"title":          log.BookTitle,
+			"authors":        log.Authors,
+			"cover_url":      log.CoverURL,
+			"description":    log.Description,
+			"pages":          log.Pages,
+			"published_date": log.PublishedDate,
+		},
 	})
 }
 

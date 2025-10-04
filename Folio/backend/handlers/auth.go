@@ -142,26 +142,33 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 	defer cancel()
 
 	query := `
-		SELECT id, google_id, email, name, username, picture, bio, created_at, updated_at
+		SELECT id, google_id, email, name, username, picture, bio, 
+		       favorite_book_ids, banner_url, reading_goal, reading_goal_year,
+		       created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
 
 	var user struct {
-		ID        string     `json:"id"`
-		GoogleID  string     `json:"google_id"`
-		Email     string     `json:"email"`
-		Name      string     `json:"name"`
-		Username  string     `json:"username"`
-		Picture   *string    `json:"picture"`
-		Bio       *string    `json:"bio"`
-		CreatedAt time.Time  `json:"created_at"`
-		UpdatedAt time.Time  `json:"updated_at"`
+		ID              string     `json:"id"`
+		GoogleID        string     `json:"google_id"`
+		Email           string     `json:"email"`
+		Name            string     `json:"name"`
+		Username        string     `json:"username"`
+		Picture         *string    `json:"picture"`
+		Bio             *string    `json:"bio"`
+		FavoriteBookIDs []string   `json:"favorite_book_ids"`
+		BannerURL       *string    `json:"banner_url"`
+		ReadingGoal     int        `json:"reading_goal"`
+		ReadingGoalYear int        `json:"reading_goal_year"`
+		CreatedAt       time.Time  `json:"created_at"`
+		UpdatedAt       time.Time  `json:"updated_at"`
 	}
 
 	err := h.DB.QueryRow(ctx, query, userID).Scan(
 		&user.ID, &user.GoogleID, &user.Email, &user.Name,
 		&user.Username, &user.Picture, &user.Bio,
+		&user.FavoriteBookIDs, &user.BannerURL, &user.ReadingGoal, &user.ReadingGoalYear,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -172,6 +179,92 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, user)
+}
+
+type UpdateProfileRequest struct {
+	Bio             *string   `json:"bio"`
+	BannerURL       *string   `json:"banner_url"`
+	FavoriteBookIDs *[]string `json:"favorite_book_ids"`
+	ReadingGoal     *int      `json:"reading_goal"`
+}
+
+// UpdateProfile updates the current user's profile
+func (h *AuthHandler) UpdateProfile(c echo.Context) error {
+	userID := auth.GetUserID(c)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	var req UpdateProfileRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	// Build dynamic update query
+	query := "UPDATE users SET updated_at = NOW()"
+	args := []interface{}{userID}
+	argIdx := 2
+
+	if req.Bio != nil {
+		query += fmt.Sprintf(", bio = $%d", argIdx)
+		args = append(args, *req.Bio)
+		argIdx++
+	}
+	if req.BannerURL != nil {
+		query += fmt.Sprintf(", banner_url = $%d", argIdx)
+		args = append(args, *req.BannerURL)
+		argIdx++
+	}
+	if req.FavoriteBookIDs != nil {
+		query += fmt.Sprintf(", favorite_book_ids = $%d", argIdx)
+		args = append(args, *req.FavoriteBookIDs)
+		argIdx++
+	}
+	if req.ReadingGoal != nil {
+		query += fmt.Sprintf(", reading_goal = $%d, reading_goal_year = EXTRACT(YEAR FROM NOW())", argIdx)
+		args = append(args, *req.ReadingGoal)
+		argIdx++
+	}
+
+	query += " WHERE id = $1 RETURNING id, bio, banner_url, favorite_book_ids, reading_goal, reading_goal_year, updated_at"
+
+	var updated struct {
+		ID              string
+		Bio             *string
+		BannerURL       *string
+		FavoriteBookIDs []string
+		ReadingGoal     int
+		ReadingGoalYear int
+		UpdatedAt       time.Time
+	}
+
+	err := h.DB.QueryRow(ctx, query, args...).Scan(
+		&updated.ID, &updated.Bio, &updated.BannerURL, &updated.FavoriteBookIDs,
+		&updated.ReadingGoal, &updated.ReadingGoalYear, &updated.UpdatedAt,
+	)
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": fmt.Sprintf("failed to update profile: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"id":                 updated.ID,
+		"bio":                updated.Bio,
+		"banner_url":         updated.BannerURL,
+		"favorite_book_ids":  updated.FavoriteBookIDs,
+		"reading_goal":       updated.ReadingGoal,
+		"reading_goal_year":  updated.ReadingGoalYear,
+		"updated_at":         updated.UpdatedAt,
+	})
 }
 
 // ConvertGuestToUser converts a guest user to a full user after OAuth

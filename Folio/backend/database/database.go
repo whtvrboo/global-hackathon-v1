@@ -93,12 +93,23 @@ func RunMigrations(config *Config) error {
 	}
 	defer m.Close()
 
+	// Check if database is in dirty state before running migrations
+	version, dirty, err := m.Version()
+	if dirty {
+		log.Printf("⚠ Database is in dirty state at version %d, attempting to fix...", version)
+		// Force the version to clean state - this allows the migration to retry
+		if err := m.Force(int(version)); err != nil {
+			return fmt.Errorf("failed to force version: %w", err)
+		}
+		log.Printf("✓ Forced database to clean state at version %d", version)
+	}
+
 	// Run migrations
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	version, dirty, err := m.Version()
+	version, dirty, err = m.Version()
 	if err != nil && err != migrate.ErrNilVersion {
 		return fmt.Errorf("failed to get migration version: %w", err)
 	}
