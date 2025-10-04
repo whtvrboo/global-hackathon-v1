@@ -1,0 +1,145 @@
+package database
+
+import (
+	"context"
+	"embed"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
+
+// Config holds database configuration
+type Config struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Database string
+}
+
+// LoadConfigFromEnv loads database configuration from environment variables
+func LoadConfigFromEnv() *Config {
+	return &Config{
+		Host:     getEnv("DB_HOST", "localhost"),
+		Port:     getEnv("DB_PORT", "5432"),
+		User:     getEnv("DB_USER", "folio_user"),
+		Password: getEnv("DB_PASSWORD", "folio_password"),
+		Database: getEnv("DB_NAME", "folio_db"),
+	}
+}
+
+// GetConnectionString returns the PostgreSQL connection string
+func (c *Config) GetConnectionString() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.User, c.Password, c.Host, c.Port, c.Database,
+	)
+}
+
+// NewPool creates a new connection pool
+func NewPool(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
+	poolConfig, err := pgxpool.ParseConfig(config.GetConnectionString())
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse connection string: %w", err)
+	}
+
+	// Configure pool settings
+	poolConfig.MaxConns = 10
+	poolConfig.MinConns = 2
+	poolConfig.MaxConnLifetime = time.Hour
+	poolConfig.MaxConnIdleTime = 30 * time.Minute
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create connection pool: %w", err)
+	}
+
+	// Test connection
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("unable to ping database: %w", err)
+	}
+
+	log.Println("✓ Database connection pool established")
+	return pool, nil
+}
+
+// RunMigrations applies database migrations automatically
+func RunMigrations(config *Config) error {
+	log.Println("Running database migrations...")
+
+	// Create source driver from embedded files
+	sourceDriver, err := iofs.New(migrationsFS, "migrations")
+	if err != nil {
+		return fmt.Errorf("failed to create migration source: %w", err)
+	}
+
+	// Create migrate instance
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",
+		sourceDriver,
+		config.GetConnectionString(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
+	}
+	defer m.Close()
+
+	// Run migrations
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return fmt.Errorf("failed to get migration version: %w", err)
+	}
+
+	if dirty {
+		log.Printf("⚠ Database is in dirty state at version %d", version)
+	} else if err == migrate.ErrNilVersion {
+		log.Println("✓ Database migrations completed (no version yet)")
+	} else {
+		log.Printf("✓ Database migrations completed (version: %d)", version)
+	}
+
+	return nil
+}
+
+// WaitForDatabase waits for the database to be ready
+func WaitForDatabase(ctx context.Context, config *Config, maxRetries int) error {
+	log.Println("Waiting for database to be ready...")
+
+	for i := 0; i < maxRetries; i++ {
+		pool, err := pgxpool.New(ctx, config.GetConnectionString())
+		if err == nil {
+			if err := pool.Ping(ctx); err == nil {
+				pool.Close()
+				log.Println("✓ Database is ready")
+				return nil
+			}
+			pool.Close()
+		}
+
+		log.Printf("Database not ready, retrying in 2s... (%d/%d)", i+1, maxRetries)
+		time.Sleep(2 * time.Second)
+	}
+
+	return fmt.Errorf("database not ready after %d attempts", maxRetries)
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+

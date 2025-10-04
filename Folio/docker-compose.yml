@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: folio-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: folio_user
+      POSTGRES_PASSWORD: folio_password
+      POSTGRES_DB: folio_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio_user -d folio_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - folio-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: folio-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: folio_user
+      DB_PASSWORD: folio_password
+      DB_NAME: folio_db
+      SERVER_PORT: 8080
+      FRONTEND_URL: http://localhost
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-your-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-your-client-secret}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/auth/google/callback}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+    networks:
+      - folio-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: folio-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - folio-network
+    restart: unless-stopped
+
+networks:
+  folio-network:
+    driver: bridge
+
+volumes:
+  db-data:
+

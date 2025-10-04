@@ -1,0 +1,8 @@
+*.md
+*.exe
+*.test
+.git
+.gitignore
+.env
+.env.local
+
