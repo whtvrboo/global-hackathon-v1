@@ -98,6 +98,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	bookHandler := &handlers.BookHandler{DB: app.DB}
 	logHandler := &handlers.LogHandler{DB: app.DB}
 	socialHandler := &handlers.SocialHandler{DB: app.DB}
+	discoverHandler := &handlers.DiscoverHandler{DB: app.DB}
 	guestHandler := &handlers.GuestHandler{DB: app.DB}
 
 	// API routes
@@ -113,6 +114,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	api.POST("/auth/guest", guestHandler.CreateGuestUser)
 	api.GET("/search", bookHandler.SearchBooks)
 	api.GET("/books/:id", bookHandler.GetBook)
+	api.GET("/discover", discoverHandler.GetRecommendations)
 
 	// Protected endpoints
 	protected := api.Group("", auth.JWTMiddleware)
@@ -123,6 +125,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	protected.GET("/feed", logHandler.GetFeed)
 	protected.POST("/users/:username/follow", socialHandler.FollowUser)
 	protected.DELETE("/users/:username/follow", socialHandler.UnfollowUser)
+	protected.POST("/discover/swipe", discoverHandler.RecordSwipe)
 }
 
 // healthCheck performs a database query and returns system status

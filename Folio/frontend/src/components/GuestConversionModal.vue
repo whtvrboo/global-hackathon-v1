@@ -1,21 +1,10 @@
 <template>
-  <transition
-    enter-active-class="transition ease-out duration-200"
-    enter-from-class="opacity-0"
-    enter-to-class="opacity-100"
-    leave-active-class="transition ease-in duration-150"
-    leave-from-class="opacity-100"
-    leave-to-class="opacity-0"
-  >
-    <div
-      v-if="show"
-      @click="$emit('close')"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-    >
-      <div
-        @click.stop
-        class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
-      >
+  <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0"
+    enter-to-class="opacity-100" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100"
+    leave-to-class="opacity-0">
+    <div v-if="show" @click="$emit('close')"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div @click.stop class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div class="text-center mb-6">
           <div class="text-4xl mb-4">🎉</div>
           <h2 class="text-2xl font-bold text-gray-900 mb-2">Save Your Progress</h2>
@@ -72,9 +61,9 @@ const convertToFullUser = () => {
   if (guestSessionId) {
     localStorage.setItem('guest_session_id', guestSessionId)
   }
-  
+
   // Redirect to Google OAuth with guest conversion
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost'
   const convertUrl = `${apiUrl}/api/auth/google/convert?guest_session_id=${guestSessionId}`
   window.location.href = convertUrl
 }

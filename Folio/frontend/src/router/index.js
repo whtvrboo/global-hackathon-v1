@@ -4,6 +4,7 @@ import LoginView from '../views/LoginView.vue'
 import AuthCallback from '../views/AuthCallback.vue'
 import ProfileView from '../views/ProfileView.vue'
 import FeedView from '../views/FeedView.vue'
+import DiscoverView from '../views/DiscoverView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -23,6 +24,11 @@ const router = createRouter({
       path: '/feed',
       name: 'feed',
       component: FeedView
+    },
+    {
+      path: '/discover',
+      name: 'discover',
+      component: DiscoverView
     },
     {
       path: '/login',

@@ -15,6 +15,9 @@ export const useAuthStore = defineStore('auth', () => {
   axios.interceptors.request.use((config) => {
     if (token.value) {
       config.headers.Authorization = `Bearer ${token.value}`
+      console.log('Adding auth header to request:', config.url)
+    } else {
+      console.log('No token available for request:', config.url)
     }
     return config
   })

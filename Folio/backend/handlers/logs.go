@@ -110,19 +110,51 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	query := `
-		SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
-		       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
-		       b.title, b.authors, b.cover_url
-		FROM logs l
-		JOIN users u ON l.user_id = u.id
-		JOIN books b ON l.book_id = b.id
-		WHERE u.username = $1 AND l.is_public = true
-		ORDER BY l.created_at DESC
-		LIMIT 50
-	`
+	// Check if the requesting user is the same as the profile owner
+	currentUserID := auth.GetUserID(c)
+	var isOwnProfile bool
+	if currentUserID != "" {
+		var profileUserID string
+		err := h.DB.QueryRow(ctx, "SELECT id FROM users WHERE username = $1", username).Scan(&profileUserID)
+		if err == nil {
+			isOwnProfile = (currentUserID == profileUserID)
+		}
+	}
 
-	rows, err := h.DB.Query(ctx, query, username)
+	var query string
+	var args []interface{}
+
+	if isOwnProfile {
+		// Show all logs (public and private) for own profile
+		query = `
+			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
+			       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
+			       b.title, b.authors, b.cover_url
+			FROM logs l
+			JOIN users u ON l.user_id = u.id
+			JOIN books b ON l.book_id = b.id
+			WHERE u.username = $1
+			ORDER BY l.created_at DESC
+			LIMIT 50
+		`
+		args = []interface{}{username}
+	} else {
+		// Show only public logs for other users
+		query = `
+			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
+			       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
+			       b.title, b.authors, b.cover_url
+			FROM logs l
+			JOIN users u ON l.user_id = u.id
+			JOIN books b ON l.book_id = b.id
+			WHERE u.username = $1 AND l.is_public = true
+			ORDER BY l.created_at DESC
+			LIMIT 50
+		`
+		args = []interface{}{username}
+	}
+
+	rows, err := h.DB.Query(ctx, query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch logs",
@@ -196,22 +228,53 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	query := `
-		SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
-		       l.created_at, u.username, u.name, u.picture,
-		       b.title, b.authors, b.cover_url
-		FROM logs l
-		JOIN users u ON l.user_id = u.id
-		JOIN books b ON l.book_id = b.id
-		WHERE l.user_id IN (
-			SELECT following_id FROM followers WHERE follower_id = $1
-		)
-		AND l.is_public = true
-		ORDER BY l.created_at DESC
-		LIMIT 50
-	`
+	// First, check if user has any followers
+	var followerCount int
+	err := h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM followers WHERE follower_id = $1", userID).Scan(&followerCount)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to check followers",
+		})
+	}
 
-	rows, err := h.DB.Query(ctx, query, userID)
+	var query string
+	var args []interface{}
+
+	if followerCount > 0 {
+		// Show logs from followed users
+		query = `
+			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
+			       l.created_at, u.username, u.name, u.picture,
+			       b.title, b.authors, b.cover_url
+			FROM logs l
+			JOIN users u ON l.user_id = u.id
+			JOIN books b ON l.book_id = b.id
+			WHERE l.user_id IN (
+				SELECT following_id FROM followers WHERE follower_id = $1
+			)
+			AND l.is_public = true
+			ORDER BY l.created_at DESC
+			LIMIT 50
+		`
+		args = []interface{}{userID}
+	} else {
+		// If no followers, show user's own logs to populate the feed
+		query = `
+			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
+			       l.created_at, u.username, u.name, u.picture,
+			       b.title, b.authors, b.cover_url
+			FROM logs l
+			JOIN users u ON l.user_id = u.id
+			JOIN books b ON l.book_id = b.id
+			WHERE l.user_id = $1
+			AND l.is_public = true
+			ORDER BY l.created_at DESC
+			LIMIT 50
+		`
+		args = []interface{}{userID}
+	}
+
+	rows, err := h.DB.Query(ctx, query, args...)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch feed",
