@@ -53,10 +53,8 @@ onMounted(async () => {
             cursorColor: '#ef4444',
             barWidth: 2,
             barRadius: 3,
-            responsive: true,
             height: 80,
             normalize: true,
-            backend: 'WebAudio',
             mediaControls: false,
         })
 
@@ -100,10 +98,12 @@ onMounted(async () => {
 
         // Add click event listener for comments
         wavesurfer.on('click', (progress: number) => {
-            const duration = wavesurfer.getDuration()
-            if (duration > 0) {
-                const timestamp = progress * duration
-                emit('add-comment', timestamp, props.stem.id)
+            if (wavesurfer) {
+                const duration = wavesurfer.getDuration()
+                if (duration > 0) {
+                    const timestamp = progress * duration
+                    emit('add-comment', timestamp, props.stem.id)
+                }
             }
         })
 
