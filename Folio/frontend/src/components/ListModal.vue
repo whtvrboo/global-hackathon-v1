@@ -1,0 +1,161 @@
+<template>
+    <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0"
+        enter-to-class="opacity-100" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100"
+        leave-to-class="opacity-0">
+        <div v-if="show" @click="$emit('close')"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div @click.stop class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">
+                        {{ isEditing ? 'Edit List' : 'Create New List' }}
+                    </h2>
+                    <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <form @submit.prevent="handleSubmit" class="space-y-6">
+                    <!-- List Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            List Name *
+                        </label>
+                        <Input v-model="form.name" placeholder="e.g., My Favorite Fantasy Books" required />
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Description
+                        </label>
+                        <TextArea v-model="form.description" placeholder="Describe what this list is about..."
+                            :rows="3" />
+                    </div>
+
+                    <!-- Visibility -->
+                    <div class="flex items-center gap-3">
+                        <input v-model="form.is_public" type="checkbox" id="is_public"
+                            class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
+                        <label for="is_public" class="text-sm text-gray-700">
+                            Make this list public (visible to other users)
+                        </label>
+                    </div>
+
+                    <!-- Error -->
+                    <div v-if="error" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        {{ error }}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 justify-end pt-4 border-t">
+                        <SecondaryButton @click="$emit('close')" type="button">
+                            Cancel
+                        </SecondaryButton>
+                        <PrimaryButton type="submit" :loading="loading">
+                            {{ isEditing ? 'Update List' : 'Create List' }}
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </transition>
+</template>
+
+<script setup>
+import { ref, reactive, watch } from 'vue'
+import axios from 'axios'
+import PrimaryButton from './ui/PrimaryButton.vue'
+import SecondaryButton from './ui/SecondaryButton.vue'
+import Input from './ui/Input.vue'
+import TextArea from './ui/TextArea.vue'
+import { useToastStore } from '../stores/toast'
+
+const props = defineProps({
+    show: Boolean,
+    list: Object, // For editing existing list
+    book: Object  // For adding book to new list
+})
+
+const emit = defineEmits(['close', 'success'])
+
+const form = reactive({
+    name: '',
+    description: '',
+    is_public: true
+})
+
+const loading = ref(false)
+const error = ref(null)
+const isEditing = ref(false)
+const toastStore = useToastStore()
+
+watch(() => props.show, (newShow) => {
+    if (newShow) {
+        if (props.list) {
+            // Editing existing list
+            isEditing.value = true
+            form.name = props.list.name || ''
+            form.description = props.list.description || ''
+            form.is_public = props.list.is_public !== false
+        } else {
+            // Creating new list
+            isEditing.value = false
+            form.name = ''
+            form.description = ''
+            form.is_public = true
+        }
+        error.value = null
+    }
+})
+
+const handleSubmit = async () => {
+    if (!form.name.trim()) {
+        error.value = 'List name is required'
+        return
+    }
+
+    loading.value = true
+    error.value = null
+
+    try {
+        if (isEditing.value) {
+            // Update existing list
+            await axios.put(`/api/lists/${props.list.id}`, {
+                name: form.name,
+                description: form.description,
+                is_public: form.is_public
+            })
+
+            toastStore.success(`List "${form.name}" updated successfully!`)
+        } else {
+            // Create new list
+            const response = await axios.post('/api/lists', {
+                name: form.name,
+                description: form.description,
+                is_public: form.is_public
+            })
+
+            // If a book was provided, add it to the new list
+            if (props.book?.id) {
+                await axios.post(`/api/lists/${response.data.id}/items`, {
+                    book_id: props.book.id
+                })
+            }
+
+            toastStore.success(`List "${form.name}" created successfully!`)
+        }
+
+        emit('success')
+        emit('close')
+    } catch (err) {
+        error.value = err.response?.data?.error || 'Failed to save list'
+        toastStore.error('Failed to save list. Please try again.')
+        console.error('Error saving list:', err)
+    } finally {
+        loading.value = false
+    }
+}
+</script>

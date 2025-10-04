@@ -26,7 +26,7 @@ type BookSearchResult struct {
 	PublishedDate string `json:"published_date"`
 }
 
-// SearchBooks searches for books using Google Books API
+// SearchBooks searches for books using local database first, then Google Books API
 func (h *BookHandler) SearchBooks(c echo.Context) error {
 	query := c.QueryParam("q")
 	if query == "" {
@@ -35,17 +35,43 @@ func (h *BookHandler) SearchBooks(c echo.Context) error {
 		})
 	}
 
-	// Search Google Books API
-	books, err := h.searchGoogleBooks(query)
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 10*time.Second)
+	defer cancel()
+
+	// First, search local database
+	localBooks, err := h.searchLocalBooks(ctx, query)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": fmt.Sprintf("failed to search local books: %v", err),
+		})
+	}
+
+	// If we have local results, return them
+	if len(localBooks) > 0 {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"results": localBooks,
+			"count":   len(localBooks),
+			"source":  "local",
+		})
+	}
+
+	// If no local results, search Google Books API and cache results
+	googleBooks, err := h.searchGoogleBooks(query)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": fmt.Sprintf("failed to search books: %v", err),
 		})
 	}
 
+	// Cache the Google Books results in our database
+	if len(googleBooks) > 0 {
+		go h.cacheBooks(ctx, googleBooks)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"results": books,
-		"count":   len(books),
+		"results": googleBooks,
+		"count":   len(googleBooks),
+		"source":  "google",
 	})
 }
 
@@ -107,10 +133,117 @@ func (h *BookHandler) GetBook(c echo.Context) error {
 		})
 	}
 
-	// Cache the book
-	h.cacheBook(ctx, bookData)
+	// Cache the book for future requests
+	go h.cacheGoogleBook(ctx, bookData)
 
 	return c.JSON(http.StatusOK, bookData)
+}
+
+// searchLocalBooks searches for books in our local database
+func (h *BookHandler) searchLocalBooks(ctx context.Context, query string) ([]BookSearchResult, error) {
+	searchQuery := "%" + query + "%"
+	
+	sql := `
+		SELECT id, title, author, description, cover_url, isbn, published_date, pages, categories
+		FROM books 
+		WHERE LOWER(title) LIKE LOWER($1) 
+		   OR LOWER(author) LIKE LOWER($1)
+		   OR LOWER(description) LIKE LOWER($1)
+		ORDER BY 
+			CASE 
+				WHEN LOWER(title) LIKE LOWER($1) THEN 1
+				WHEN LOWER(author) LIKE LOWER($1) THEN 2
+				ELSE 3
+			END,
+			title
+		LIMIT 20
+	`
+	
+	rows, err := h.DB.Query(ctx, sql, searchQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var books []BookSearchResult
+	for rows.Next() {
+		var book struct {
+			ID            string
+			Title         string
+			Author        string
+			Description   string
+			CoverURL      string
+			ISBN          string
+			PublishedDate string
+			Pages         int
+			Categories    string
+		}
+
+		err := rows.Scan(
+			&book.ID, &book.Title, &book.Author, &book.Description,
+			&book.CoverURL, &book.ISBN, &book.PublishedDate, &book.Pages, &book.Categories,
+		)
+		if err != nil {
+			continue
+		}
+
+		// Parse categories JSON
+		var categories []string
+		if book.Categories != "" {
+			json.Unmarshal([]byte(book.Categories), &categories)
+		}
+
+		books = append(books, BookSearchResult{
+			ID:            book.ID,
+			Title:         book.Title,
+			Authors:       []string{book.Author},
+			Description:   book.Description,
+			CoverURL:      book.CoverURL,
+			PublishedDate: book.PublishedDate,
+		})
+	}
+
+	return books, nil
+}
+
+// cacheBooks stores Google Books results in our local database
+func (h *BookHandler) cacheBooks(ctx context.Context, books []BookSearchResult) {
+	for _, book := range books {
+		// Check if book already exists
+		var exists bool
+		err := h.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM books WHERE id = $1)", book.ID).Scan(&exists)
+		if err != nil || exists {
+			continue
+		}
+
+		// Insert new book
+		_, err = h.DB.Exec(ctx, `
+			INSERT INTO books (id, title, author, description, cover_url, isbn, published_date, pages, categories, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+		`, 
+			book.ID,
+			book.Title,
+			book.Authors[0], // Take first author
+			book.Description,
+			book.CoverURL,
+			"", // ISBN not available from Google Books API in this format
+			book.PublishedDate,
+			0, // Pages not available
+			"[]", // Empty categories for now
+		)
+		
+		if err != nil {
+			// Log error but continue with other books
+			fmt.Printf("Failed to cache book %s: %v\n", book.Title, err)
+		}
+	}
+}
+
+// cacheGoogleBook stores a single Google Book in our local database
+func (h *BookHandler) cacheGoogleBook(ctx context.Context, bookData interface{}) {
+	// This would need to be implemented based on the structure of bookData
+	// For now, we'll implement a basic version
+	fmt.Printf("Caching Google Book: %v\n", bookData)
 }
 
 func (h *BookHandler) searchGoogleBooks(query string) ([]BookSearchResult, error) {

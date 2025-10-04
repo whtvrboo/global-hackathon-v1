@@ -129,7 +129,9 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 		query = `
 			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
 			       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
-			       b.title, b.authors, b.cover_url
+			       l.likes_count, l.comments_count,
+			       b.title, b.authors, b.cover_url,
+			       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $2) as is_liked
 			FROM logs l
 			JOIN users u ON l.user_id = u.id
 			JOIN books b ON l.book_id = b.id
@@ -137,13 +139,15 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 			ORDER BY l.created_at DESC
 			LIMIT 50
 		`
-		args = []interface{}{username}
+		args = []interface{}{username, currentUserID}
 	} else {
 		// Show only public logs for other users
 		query = `
 			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
 			       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
-			       b.title, b.authors, b.cover_url
+			       l.likes_count, l.comments_count,
+			       b.title, b.authors, b.cover_url,
+			       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $2) as is_liked
 			FROM logs l
 			JOIN users u ON l.user_id = u.id
 			JOIN books b ON l.book_id = b.id
@@ -151,7 +155,7 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 			ORDER BY l.created_at DESC
 			LIMIT 50
 		`
-		args = []interface{}{username}
+		args = []interface{}{username, currentUserID}
 	}
 
 	rows, err := h.DB.Query(ctx, query, args...)
@@ -165,43 +169,50 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 	logs := []map[string]interface{}{}
 	for rows.Next() {
 		var log struct {
-			ID         string
-			UserID     string
-			BookID     string
-			Status     string
-			Rating     *int
-			Review     *string
-			Notes      *string
-			StartDate  *string
-			FinishDate *string
-			IsPublic   bool
-			CreatedAt  time.Time
-			BookTitle  string
-			Authors    []string
-			CoverURL   *string
+			ID            string
+			UserID        string
+			BookID        string
+			Status        string
+			Rating        *int
+			Review        *string
+			Notes         *string
+			StartDate     *string
+			FinishDate    *string
+			IsPublic      bool
+			CreatedAt     time.Time
+			LikesCount    int
+			CommentsCount int
+			BookTitle     string
+			Authors       []string
+			CoverURL      *string
+			IsLiked       bool
 		}
 
 		err := rows.Scan(
 			&log.ID, &log.UserID, &log.BookID, &log.Status, &log.Rating,
 			&log.Review, &log.Notes, &log.StartDate, &log.FinishDate,
-			&log.IsPublic, &log.CreatedAt, &log.BookTitle, &log.Authors, &log.CoverURL,
+			&log.IsPublic, &log.CreatedAt, &log.LikesCount, &log.CommentsCount,
+			&log.BookTitle, &log.Authors, &log.CoverURL, &log.IsLiked,
 		)
 		if err != nil {
 			continue
 		}
 
 		logs = append(logs, map[string]interface{}{
-			"id":          log.ID,
-			"user_id":     log.UserID,
-			"book_id":     log.BookID,
-			"status":      log.Status,
-			"rating":      log.Rating,
-			"review":      log.Review,
-			"notes":       log.Notes,
-			"start_date":  log.StartDate,
-			"finish_date": log.FinishDate,
-			"is_public":   log.IsPublic,
-			"created_at":  log.CreatedAt,
+			"id":             log.ID,
+			"user_id":        log.UserID,
+			"book_id":        log.BookID,
+			"status":         log.Status,
+			"rating":         log.Rating,
+			"review":         log.Review,
+			"notes":          log.Notes,
+			"start_date":     log.StartDate,
+			"finish_date":    log.FinishDate,
+			"is_public":      log.IsPublic,
+			"created_at":     log.CreatedAt,
+			"likes_count":    log.LikesCount,
+			"comments_count": log.CommentsCount,
+			"is_liked":       log.IsLiked,
 			"book": map[string]interface{}{
 				"title":     log.BookTitle,
 				"authors":   log.Authors,
@@ -244,8 +255,10 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 		// Show logs from followed users
 		query = `
 			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
-			       l.created_at, u.username, u.name, u.picture,
-			       b.title, b.authors, b.cover_url
+			       l.created_at, l.likes_count, l.comments_count,
+			       u.username, u.name, u.picture,
+			       b.title, b.authors, b.cover_url,
+			       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $1) as is_liked
 			FROM logs l
 			JOIN users u ON l.user_id = u.id
 			JOIN books b ON l.book_id = b.id
@@ -261,8 +274,10 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 		// If no followers, show user's own logs to populate the feed
 		query = `
 			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
-			       l.created_at, u.username, u.name, u.picture,
-			       b.title, b.authors, b.cover_url
+			       l.created_at, l.likes_count, l.comments_count,
+			       u.username, u.name, u.picture,
+			       b.title, b.authors, b.cover_url,
+			       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $1) as is_liked
 			FROM logs l
 			JOIN users u ON l.user_id = u.id
 			JOIN books b ON l.book_id = b.id
@@ -285,37 +300,44 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 	feed := []map[string]interface{}{}
 	for rows.Next() {
 		var item struct {
-			LogID      string
-			UserID     string
-			BookID     string
-			Status     string
-			Rating     *int
-			Review     *string
-			CreatedAt  time.Time
-			Username   string
-			Name       string
-			Picture    *string
-			BookTitle  string
-			Authors    []string
-			CoverURL   *string
+			LogID         string
+			UserID        string
+			BookID        string
+			Status        string
+			Rating        *int
+			Review        *string
+			CreatedAt     time.Time
+			LikesCount    int
+			CommentsCount int
+			Username      string
+			Name          string
+			Picture       *string
+			BookTitle     string
+			Authors       []string
+			CoverURL      *string
+			IsLiked       bool
 		}
 
 		err := rows.Scan(
 			&item.LogID, &item.UserID, &item.BookID, &item.Status,
 			&item.Rating, &item.Review, &item.CreatedAt,
+			&item.LikesCount, &item.CommentsCount,
 			&item.Username, &item.Name, &item.Picture,
-			&item.BookTitle, &item.Authors, &item.CoverURL,
+			&item.BookTitle, &item.Authors, &item.CoverURL, &item.IsLiked,
 		)
 		if err != nil {
 			continue
 		}
 
 		feed = append(feed, map[string]interface{}{
-			"id":         item.LogID,
-			"status":     item.Status,
-			"rating":     item.Rating,
-			"review":     item.Review,
-			"created_at": item.CreatedAt,
+			"id":             item.LogID,
+			"status":         item.Status,
+			"rating":         item.Rating,
+			"review":         item.Review,
+			"created_at":     item.CreatedAt,
+			"likes_count":    item.LikesCount,
+			"comments_count": item.CommentsCount,
+			"is_liked":       item.IsLiked,
 			"user": map[string]interface{}{
 				"id":       item.UserID,
 				"username": item.Username,

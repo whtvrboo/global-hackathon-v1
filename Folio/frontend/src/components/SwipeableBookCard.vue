@@ -37,6 +37,15 @@
                     by {{ book.authors.join(', ') }}
                 </p>
 
+                <!-- Recommendation Reason -->
+                <div v-if="reason" class="mb-3 p-3 bg-accent-blue/10 border border-accent-blue/20 rounded-lg">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-accent-blue text-sm font-semibold">{{ getReasonIcon(reason.type) }}</span>
+                        <span class="text-accent-blue text-xs font-medium">{{ reason.confidence }}% match</span>
+                    </div>
+                    <p class="text-xs text-dark-200">{{ reason.description }}</p>
+                </div>
+
                 <!-- Description -->
                 <p v-if="book.description" class="text-caption text-dark-300 line-clamp-3 mb-4">
                     {{ book.description }}
@@ -98,6 +107,10 @@ const props = defineProps({
     book: {
         type: Object,
         required: true
+    },
+    reason: {
+        type: Object,
+        default: null
     }
 })
 
@@ -232,5 +245,16 @@ const resetPosition = () => {
     translateX.value = 0
     rotation.value = 0
     swipeDirection.value = null
+}
+
+const getReasonIcon = (type) => {
+    const icons = {
+        'similar': '🎯',
+        'friend': '👥',
+        'category': '📚',
+        'trending': '🔥',
+        'serendipity': '✨'
+    }
+    return icons[type] || '💡'
 }
 </script>

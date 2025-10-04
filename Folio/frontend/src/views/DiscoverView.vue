@@ -51,13 +51,13 @@
             <!-- Card Stack -->
             <div v-else class="relative w-full max-w-sm mx-auto aspect-[3/4] mb-8">
                 <!-- Background cards (for depth effect) -->
-                <div v-for="(card, index) in visibleCards" :key="card.id" :style="{
+                <div v-for="(card, index) in visibleCards" :key="card.book.id" :style="{
                     transform: `scale(${1 - index * 0.05}) translateY(${index * 10}px)`,
                     zIndex: visibleCards.length - index,
                     opacity: 1 - index * 0.3
                 }" class="absolute inset-0">
-                    <SwipeableBookCard v-if="index === 0" :book="card" @like="handleLike(card)"
-                        @pass="handlePass(card)" />
+                    <SwipeableBookCard v-if="index === 0" :book="card.book" :reason="card.reason"
+                        @like="handleLike(card)" @pass="handlePass(card)" />
                     <div v-else class="h-full bg-dark-800 rounded-3xl shadow-xl"></div>
                 </div>
 
@@ -231,17 +231,17 @@ const loadRecommendations = async () => {
     }
 }
 
-const handleLike = async (book) => {
+const handleLike = async (recommendation) => {
     stats.value.liked++
     stats.value.total++
 
     // Remove card from stack
-    cards.value = cards.value.filter(c => c.id !== book.id)
+    cards.value = cards.value.filter(c => c.book.id !== recommendation.book.id)
 
     // Record swipe
     try {
         await axios.post('/api/discover/swipe', {
-            book_id: book.id,
+            book_id: recommendation.book.id,
             action: 'like'
         })
     } catch (error) {
@@ -249,7 +249,7 @@ const handleLike = async (book) => {
     }
 
     // Show log modal
-    bookToLog.value = book
+    bookToLog.value = recommendation.book
     setTimeout(() => {
         showLogModal.value = true
     }, 300)
@@ -262,17 +262,17 @@ const handleLike = async (book) => {
     hideInstructionsIfNeeded()
 }
 
-const handlePass = async (book) => {
+const handlePass = async (recommendation) => {
     stats.value.passed++
     stats.value.total++
 
     // Remove card from stack
-    cards.value = cards.value.filter(c => c.id !== book.id)
+    cards.value = cards.value.filter(c => c.book.id !== recommendation.book.id)
 
     // Record swipe
     try {
         await axios.post('/api/discover/swipe', {
-            book_id: book.id,
+            book_id: recommendation.book.id,
             action: 'pass'
         })
     } catch (error) {
@@ -287,8 +287,8 @@ const handlePass = async (book) => {
     hideInstructionsIfNeeded()
 }
 
-const showBookInfo = (book) => {
-    selectedBookId.value = book.id
+const showBookInfo = (recommendation) => {
+    selectedBookId.value = recommendation.book.id
     showDetailModal.value = true
 }
 

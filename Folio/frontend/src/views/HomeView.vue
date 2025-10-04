@@ -58,6 +58,52 @@
         </div>
       </section>
 
+      <!-- Public Browse Section for Unauthenticated Users -->
+      <section v-if="!authStore.user" class="container-mobile max-w-7xl mx-auto mb-8">
+        <div class="text-center mb-8">
+          <h2 class="text-heading-2 mb-4">📖 Browse Popular Books</h2>
+          <p class="text-body text-dark-300">Discover what others are reading</p>
+        </div>
+
+        <!-- Public Book Grid -->
+        <div v-if="publicBooks.length > 0" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div v-for="book in publicBooks.slice(0, 12)" :key="book.id" class="card card-hover group cursor-pointer"
+            @click="handleBookSelect(book)">
+            <div class="aspect-[2/3] bg-dark-800 rounded-xl mb-3 relative overflow-hidden">
+              <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title" class="w-full h-full object-cover" />
+              <div v-else
+                class="w-full h-full bg-gradient-to-br from-accent-red/20 to-accent-blue/20 flex items-center justify-center">
+                <span class="text-4xl">📚</span>
+              </div>
+              <div v-if="book.rating" class="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                {{ book.rating.toFixed(1) }} ⭐
+              </div>
+            </div>
+            <h3 class="font-semibold text-white text-sm line-clamp-2 mb-1">{{ book.title }}</h3>
+            <p v-if="book.authors" class="text-caption text-dark-300 line-clamp-1">
+              by {{ book.authors[0] }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Public Browse CTA -->
+        <div class="text-center mt-8">
+          <div class="card inline-block">
+            <h3 class="text-heading-3 mb-4">Ready to start your reading journey?</h3>
+            <p class="text-body text-dark-300 mb-6">Create a free account to log books, track your reading, and discover
+              personalized recommendations.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+              <button @click="$router.push('/login')" class="btn-primary">
+                Get Started Free
+              </button>
+              <button @click="startGuestSession" class="btn-secondary">
+                Try as Guest
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Content Feed - TikTok-style vertical scroll -->
       <div class="space-y-6 pb-24">
         <!-- Trending Books Section -->
@@ -165,6 +211,65 @@
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- Trending Lists Section -->
+        <section class="container-mobile max-w-7xl mx-auto">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-heading-2">📚 Trending Lists</h2>
+            <button @click="loadTrendingLists" class="text-accent-blue hover:text-accent-blue/80 text-sm font-medium">
+              Refresh
+            </button>
+          </div>
+
+          <!-- Horizontal Scroll Lists -->
+          <div v-if="trendingLists.length > 0" class="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            <div v-for="list in trendingLists" :key="list.id" class="flex-shrink-0 w-64">
+              <div class="card card-hover group cursor-pointer" @click="viewList(list)">
+                <div class="p-4">
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                      <h3 class="font-semibold text-white mb-1 line-clamp-2">{{ list.name }}</h3>
+                      <p v-if="list.description" class="text-caption text-dark-300 mb-2 line-clamp-2">
+                        {{ list.description }}
+                      </p>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-lg font-bold text-accent-red">{{ list.items_count }}</div>
+                      <div class="text-xs text-dark-400">books</div>
+                    </div>
+                  </div>
+
+                  <!-- List Creator -->
+                  <div class="flex items-center gap-2 mb-3">
+                    <img v-if="list.user.picture" :src="list.user.picture" :alt="list.user.name"
+                      class="w-6 h-6 rounded-full" />
+                    <div v-else class="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center">
+                      <span class="text-xs text-dark-400">👤</span>
+                    </div>
+                    <span class="text-sm text-dark-300">by {{ list.user.name }}</span>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="flex gap-2">
+                    <button class="flex-1 btn-primary text-sm py-2" @click.stop="viewList(list)">
+                      View List
+                    </button>
+                    <button class="flex-1 btn-secondary text-sm py-2" @click.stop="followList(list)">
+                      Follow
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State for Lists -->
+          <div v-else class="card text-center py-8">
+            <div class="text-4xl mb-4">📚</div>
+            <h3 class="text-heading-3 mb-2">No trending lists yet</h3>
+            <p class="text-caption text-dark-300">Be the first to create a public list!</p>
           </div>
         </section>
 
@@ -360,8 +465,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
 import SearchBar from '../components/SearchBar.vue'
 import Card from '../components/ui/Card.vue'
 import BookDetailModal from '../components/BookDetailModal.vue'
@@ -375,6 +481,8 @@ const showBookDetail = ref(false)
 const showLogModal = ref(false)
 const showConversionModal = ref(false)
 const bookToLog = ref(null)
+const trendingLists = ref([])
+const publicBooks = ref([])
 
 const handleBookSelect = (book) => {
   selectedBookId.value = book.id
@@ -390,5 +498,60 @@ const handleLogBook = (book) => {
 const handleLogSuccess = () => {
   // Could show a success toast here
   console.log('Book logged successfully!')
+}
+
+// Load trending lists on component mount
+onMounted(async () => {
+  await loadTrendingLists()
+  // Load public books for unauthenticated users
+  if (!authStore.user) {
+    await loadPublicBooks()
+  }
+})
+
+const loadTrendingLists = async () => {
+  try {
+    const response = await axios.get('/api/discover/lists', {
+      params: { limit: 10 }
+    })
+    trendingLists.value = response.data.lists || []
+  } catch (error) {
+    console.error('Error loading trending lists:', error)
+    trendingLists.value = []
+  }
+}
+
+const viewList = (list) => {
+  // Navigate to list detail view (could be a modal or new page)
+  console.log('Viewing list:', list.name)
+  // For now, just show an alert
+  alert(`Viewing list: ${list.name}`)
+}
+
+const followList = (list) => {
+  // Follow list functionality
+  console.log('Following list:', list.name)
+  // For now, just show an alert
+  alert(`Following list: ${list.name}`)
+}
+
+const loadPublicBooks = async () => {
+  try {
+    const response = await axios.get('/api/discover', {
+      params: { limit: 12 }
+    })
+    publicBooks.value = response.data.recommendations || []
+  } catch (error) {
+    console.error('Error loading public books:', error)
+    publicBooks.value = []
+  }
+}
+
+const startGuestSession = () => {
+  // Redirect to login with guest option
+  // This would typically trigger the guest login flow
+  console.log('Starting guest session')
+  // For now, redirect to login
+  window.location.href = '/login'
 }
 </script>

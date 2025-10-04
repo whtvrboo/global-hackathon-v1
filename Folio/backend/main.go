@@ -100,6 +100,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	socialHandler := &handlers.SocialHandler{DB: app.DB}
 	discoverHandler := &handlers.DiscoverHandler{DB: app.DB}
 	guestHandler := &handlers.GuestHandler{DB: app.DB}
+	listHandler := &handlers.ListHandler{DB: app.DB}
 
 	// API routes
 	api := e.Group("/api")
@@ -115,6 +116,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	api.GET("/search", bookHandler.SearchBooks)
 	api.GET("/books/:id", bookHandler.GetBook)
 	api.GET("/discover", discoverHandler.GetRecommendations)
+	api.GET("/discover/lists", discoverHandler.GetTrendingLists)
 
 	// Protected endpoints
 	protected := api.Group("", auth.JWTMiddleware)
@@ -126,6 +128,28 @@ func setupRoutes(e *echo.Echo, app *App) {
 	protected.POST("/users/:username/follow", socialHandler.FollowUser)
 	protected.DELETE("/users/:username/follow", socialHandler.UnfollowUser)
 	protected.POST("/discover/swipe", discoverHandler.RecordSwipe)
+	
+	// Like and comment endpoints
+	protected.POST("/logs/:id/like", socialHandler.ToggleLike)
+	protected.GET("/logs/:id/comments", socialHandler.GetLogComments)
+	protected.POST("/logs/:id/comments", socialHandler.CreateComment)
+	protected.DELETE("/comments/:commentId", socialHandler.DeleteComment)
+	
+	// List endpoints
+	protected.POST("/lists", listHandler.CreateList)
+	protected.GET("/users/:username/lists", listHandler.GetUserLists)
+	protected.GET("/lists/:id", listHandler.GetList)
+	protected.PUT("/lists/:id", listHandler.UpdateList)
+	protected.DELETE("/lists/:id", listHandler.DeleteList)
+	protected.POST("/lists/:id/items", listHandler.AddBookToList)
+	protected.PUT("/lists/:id/items/:itemId/order", listHandler.UpdateListItemOrder)
+	protected.DELETE("/lists/:id/items/:itemId", listHandler.RemoveBookFromList)
+	
+	// List social features
+	protected.POST("/lists/:id/like", listHandler.LikeList)
+	protected.DELETE("/lists/:id/like", listHandler.UnlikeList)
+	protected.GET("/lists/:id/comments", listHandler.GetListComments)
+	protected.POST("/lists/:id/comments", listHandler.AddListComment)
 }
 
 // healthCheck performs a database query and returns system status
