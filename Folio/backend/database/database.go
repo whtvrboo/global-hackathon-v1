@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -16,6 +18,9 @@ import (
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
+
+//go:embed ../../database/*.sql
+var seedsFS embed.FS
 
 // Config holds database configuration
 type Config struct {
@@ -122,6 +127,13 @@ func RunMigrations(config *Config) error {
 		log.Printf("✓ Database migrations completed (version: %d)", version)
 	}
 
+    // Optionally run seed data after successful migrations
+    if strings.EqualFold(getEnv("DB_AUTO_SEED", "false"), "true") {
+        if err := runSeeds(config); err != nil {
+            return err
+        }
+    }
+
 	return nil
 }
 
@@ -152,5 +164,70 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+
+// runSeeds loads and executes seed SQL based on environment variables.
+// Controls:
+// - DB_AUTO_SEED=true to enable seeding (checked in RunMigrations)
+// - DB_SEED_DATA one of: "books", "full", "demo" (default: "full")
+func runSeeds(config *Config) error {
+    mode := strings.ToLower(strings.TrimSpace(getEnv("DB_SEED_DATA", "full")))
+
+    var seedFile string
+    switch mode {
+    case "books":
+        seedFile = "books_seed.sql"
+    case "demo":
+        seedFile = "demo_seed.sql"
+    case "full":
+        fallthrough
+    default:
+        seedFile = "seed.sql"
+    }
+
+    // Read the chosen seed file from embedded FS
+    seedSQLBytes, err := seedsFS.ReadFile(path.Join("../../database", seedFile))
+    if err != nil {
+        return fmt.Errorf("failed to read seed file %s: %w", seedFile, err)
+    }
+    seedSQL := string(seedSQLBytes)
+
+    // Expand simple psql include used in seed.sql: \i books_seed.sql
+    // This allows executing via pgx without psql.
+    if strings.Contains(seedSQL, "\\i ") || strings.Contains(seedSQL, "\\i\t") {
+        // Only handle includes of books_seed.sql which is the only one present
+        includeTarget := "books_seed.sql"
+        inclBytes, inclErr := seedsFS.ReadFile(path.Join("../../database", includeTarget))
+        if inclErr != nil {
+            return fmt.Errorf("failed to read included seed file %s: %w", includeTarget, inclErr)
+        }
+        // Replace any line starting with \i books_seed.sql with file contents
+        lines := strings.Split(seedSQL, "\n")
+        for i, line := range lines {
+            trimmed := strings.TrimSpace(line)
+            if strings.HasPrefix(trimmed, "\\i ") || strings.HasPrefix(trimmed, "\\i\t") {
+                if strings.Contains(trimmed, includeTarget) {
+                    lines[i] = string(inclBytes)
+                }
+            }
+        }
+        seedSQL = strings.Join(lines, "\n")
+    }
+
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, config.GetConnectionString())
+    if err != nil {
+        return fmt.Errorf("failed to connect for seeding: %w", err)
+    }
+    defer pool.Close()
+
+    log.Printf("Running database seed: %s (mode=%s)", seedFile, mode)
+    // Execute as a single multi-statement script
+    if _, err := pool.Exec(ctx, seedSQL); err != nil {
+        return fmt.Errorf("failed to execute seed script %s: %w", seedFile, err)
+    }
+    log.Println("✓ Database seed completed")
+    return nil
 }
 
