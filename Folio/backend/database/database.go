@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -19,7 +18,7 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-//go:embed ../../database/*.sql
+//go:embed seeds/*.sql
 var seedsFS embed.FS
 
 // Config holds database configuration
@@ -187,7 +186,7 @@ func runSeeds(config *Config) error {
     }
 
     // Read the chosen seed file from embedded FS
-    seedSQLBytes, err := seedsFS.ReadFile(path.Join("../../database", seedFile))
+    seedSQLBytes, err := seedsFS.ReadFile("seeds/" + seedFile)
     if err != nil {
         return fmt.Errorf("failed to read seed file %s: %w", seedFile, err)
     }
@@ -198,7 +197,7 @@ func runSeeds(config *Config) error {
     if strings.Contains(seedSQL, "\\i ") || strings.Contains(seedSQL, "\\i\t") {
         // Only handle includes of books_seed.sql which is the only one present
         includeTarget := "books_seed.sql"
-        inclBytes, inclErr := seedsFS.ReadFile(path.Join("../../database", includeTarget))
+        inclBytes, inclErr := seedsFS.ReadFile("seeds/" + includeTarget)
         if inclErr != nil {
             return fmt.Errorf("failed to read included seed file %s: %w", includeTarget, inclErr)
         }
