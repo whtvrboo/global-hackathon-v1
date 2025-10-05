@@ -14,7 +14,13 @@
         <div class="text-6xl mb-6">😞</div>
         <h3 class="text-heading-2 mb-4">Profile not found</h3>
         <p class="text-body text-dark-300 mb-8 max-w-md mx-auto">
-          The user profile you're looking for doesn't exist or you don't have permission to view it.
+          <span v-if="authStore.isGuestUser && authStore.user?.username === route.params.username">
+            Your guest profile is being set up. Please try refreshing the page or logging in to access your full
+            profile.
+          </span>
+          <span v-else>
+            The user profile you're looking for doesn't exist or you don't have permission to view it.
+          </span>
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <button @click="$router.push('/')" class="btn-primary">
@@ -22,6 +28,10 @@
           </button>
           <button @click="$router.push('/discover')" class="btn-secondary">
             Discover Books
+          </button>
+          <button v-if="authStore.isGuestUser && authStore.user?.username === route.params.username"
+            @click="window.location.reload()" class="btn-secondary">
+            Refresh Page
           </button>
         </div>
       </div>
@@ -493,19 +503,32 @@ const getTimePeriod = (date) => {
 onMounted(async () => {
   try {
     const username = route.params.username
+    console.log('Loading profile for username:', username)
+    console.log('Current auth user:', authStore.user)
+    console.log('Is authenticated:', authStore.isAuthenticated)
+    console.log('Is guest user:', authStore.isGuestUser)
 
     // Ensure auth store is initialized for guest users
     if (authStore.isAuthenticated && !authStore.user) {
+      console.log('Fetching user data...')
       await authStore.fetchUser()
     }
 
+    // Check if this is the current user's own profile
+    const isOwnProfile = authStore.user && authStore.user.username === username
+    console.log('Is own profile:', isOwnProfile)
+
     // Fetch user profile
+    console.log('Fetching profile from API...')
     const profileResponse = await axios.get(`/api/users/${username}`)
+    console.log('Profile response:', profileResponse.data)
     user.value = profileResponse.data
     isFollowing.value = profileResponse.data.is_following
 
     // Fetch user's logs
+    console.log('Fetching user logs...')
     const logsResponse = await axios.get(`/api/users/${username}/logs`)
+    console.log('Logs response:', logsResponse.data)
     logs.value = logsResponse.data.logs || []
 
     // Load favorite books (for now, get highest rated books)
@@ -521,6 +544,40 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Error loading profile:', error)
+    console.error('Error response:', error.response?.data)
+    console.error('Error status:', error.response?.status)
+
+    // If it's a 404 and this is the current user's own profile, 
+    // try to redirect to their actual profile or show a different message
+    if (error.response?.status === 404 && authStore.user && authStore.user.username === route.params.username) {
+      console.log('Profile not found for own username, this might be a guest user issue')
+      // For guest users, we might need to handle this differently
+      if (authStore.isGuestUser) {
+        console.log('This is a guest user, showing guest-specific message')
+        // Try to use the guest user data directly if available
+        if (authStore.user) {
+          console.log('Using guest user data directly')
+          user.value = {
+            ...authStore.user,
+            is_guest: true,
+            stats: {
+              followers_count: 0,
+              following_count: 0,
+              public_lists: 0,
+              total_books: 0,
+              read_books: 0,
+              reading_books: 0,
+              want_to_read_books: 0
+            }
+          }
+          isFollowing.value = false
+          logs.value = []
+          favoriteBooks.value = []
+          return // Skip the rest of the error handling
+        }
+      }
+    }
+
     // Show error state instead of blank screen
     user.value = null
   } finally {

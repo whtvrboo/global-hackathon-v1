@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"folio/api/auth"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -335,6 +336,9 @@ func (h *AuthHandler) ConvertGuestToUser(c echo.Context) error {
 }
 
 func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
 	return defaultValue
 }
 

@@ -11,7 +11,7 @@
       </div>
 
       <div class="space-y-6">
-        <a :href="googleAuthUrl" class="btn-primary w-full flex items-center justify-center gap-3 py-4">
+        <button @click="signInWithGoogle" class="btn-primary w-full flex items-center justify-center gap-3 py-4">
           <svg class="w-5 h-5" viewBox="0 0 24 24">
             <path fill="currentColor"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -23,7 +23,7 @@
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
           Sign in with Google
-        </a>
+        </button>
 
         <div class="relative">
           <div class="absolute inset-0 flex items-center">
@@ -40,15 +40,6 @@
           <span v-else class="text-xl">U</span>
           {{ loading ? 'Creating guest account...' : 'Try as Guest' }}
         </button>
-
-        <div class="mt-8 p-4 bg-dark-800/50 rounded-xl border border-dark-700">
-          <h3 class="text-sm font-semibold text-white mb-2">Guest Account Benefits</h3>
-          <ul class="text-xs text-dark-300 space-y-1">
-            <li>• Save books locally on your device</li>
-            <li>• Try all features risk-free</li>
-            <li>• Upgrade anytime to sync across devices</li>
-          </ul>
-        </div>
 
         <p class="text-caption text-dark-500">
           By signing in, you agree to our Terms of Service and Privacy Policy
@@ -67,8 +58,13 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(false)
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost'
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 const googleAuthUrl = `${apiUrl}/api/auth/google`
+
+const signInWithGoogle = () => {
+  // For PWA environments, use window.location to ensure proper redirect handling
+  window.location.href = googleAuthUrl
+}
 
 const tryAsGuest = async () => {
   loading.value = true

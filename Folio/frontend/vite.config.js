@@ -14,7 +14,7 @@ export default defineConfig({
         description: 'Track your reading journey with Folio - a beautiful reading journal app',
         theme_color: '#1f2937',
         background_color: '#ffffff',
-        display: 'standalone',
+        display: 'browser', // Changed from 'standalone' to allow OAuth redirects
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
@@ -39,6 +39,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: null, // Disable fallback to prevent OAuth issues
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\./,

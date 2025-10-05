@@ -24,13 +24,37 @@
                 </nav>
 
                 <!-- Mobile Menu Button -->
-                <button class="md:hidden p-2 text-dark-300 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click="toggleMobileMenu"
+                    class="md:hidden p-2 text-dark-300 hover:text-white transition-colors">
+                    <svg v-if="!isMobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
+                    <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
                 </button>
             </div>
+        </div>
+
+        <!-- Mobile Menu Overlay -->
+        <div v-if="isMobileMenuOpen"
+            class="md:hidden absolute top-full left-0 right-0 glass-strong border-b border-dark-800 z-40">
+            <nav class="container-mobile max-w-7xl mx-auto py-4">
+                <div class="flex flex-col gap-4">
+                    <router-link to="/discover" @click="closeMobileMenu"
+                        class="btn-ghost text-left">Discover</router-link>
+                    <router-link v-if="authStore.isAuthenticated" to="/feed" @click="closeMobileMenu"
+                        class="btn-ghost text-left">Feed</router-link>
+                    <router-link v-if="authStore.isAuthenticated" :to="`/profile/${authStore.user?.username}`"
+                        @click="closeMobileMenu" class="btn-ghost text-left">Profile</router-link>
+                    <router-link v-if="!authStore.isAuthenticated" to="/login" @click="closeMobileMenu"
+                        class="btn-primary text-center">Login</router-link>
+                    <button v-if="authStore.isAuthenticated" @click="handleLogout"
+                        class="btn-ghost text-left">Logout</button>
+                </div>
+            </nav>
         </div>
     </header>
 
@@ -82,10 +106,13 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
+
+// Mobile menu state
+const isMobileMenuOpen = ref(false)
 
 // Routes where navigation should not be shown
 const noNavigationRoutes = ['/login', '/auth/callback']
@@ -96,5 +123,19 @@ const shouldShowNavigation = computed(() => {
 
 const isActive = (path) => {
     return route.path === path
+}
+
+// Mobile menu functions
+const toggleMobileMenu = () => {
+    isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+const closeMobileMenu = () => {
+    isMobileMenuOpen.value = false
+}
+
+const handleLogout = () => {
+    authStore.logout()
+    closeMobileMenu()
 }
 </script>

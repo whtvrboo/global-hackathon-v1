@@ -2,194 +2,197 @@
   <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0"
     enter-to-class="opacity-100" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100"
     leave-to-class="opacity-0">
-    <div v-if="show" @click="$emit('close')"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
-        leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
-        <div v-if="show" @click.stop
-          class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-          <!-- Loading State -->
-          <div v-if="loading" class="p-12 text-center">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p class="mt-4 text-gray-600">Loading book details...</p>
-          </div>
+    <div v-if="show">
+      <div @click="$emit('close')"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
+          leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+          <div v-if="show" @click.stop
+            class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Loading State -->
+            <div v-if="loading" class="p-12 text-center">
+              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p class="mt-4 text-gray-600">Loading book details...</p>
+            </div>
 
-          <!-- Book Details -->
-          <div v-else-if="bookDetails" class="p-8">
-            <div class="flex gap-6 mb-6">
-              <!-- Book Cover -->
-              <div class="flex-shrink-0">
-                <img v-if="bookDetails.cover_url" :src="bookDetails.cover_url" :alt="bookDetails.title"
-                  class="w-48 h-72 object-cover rounded-lg shadow-lg" />
-                <div v-else class="w-48 h-72 bg-gray-200 rounded-lg flex items-center justify-center text-6xl">
-                </div>
-              </div>
-
-              <!-- Book Info -->
-              <div class="flex-1 min-w-0">
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">
-                  {{ bookDetails.title }}
-                </h2>
-                <p v-if="bookDetails.authors?.length" class="text-lg text-gray-600 mb-4">
-                  by {{ bookDetails.authors.join(', ') }}
-                </p>
-
-                <!-- Metadata -->
-                <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
-                  <div v-if="bookDetails.published_date">
-                    {{ bookDetails.published_date }}
-                  </div>
-                  <div v-if="bookDetails.page_count">
-                    {{ bookDetails.page_count }} pages
-                  </div>
-                  <div v-if="bookDetails.publisher">
-                    {{ bookDetails.publisher }}
+            <!-- Book Details -->
+            <div v-else-if="bookDetails" class="p-8">
+              <div class="flex gap-6 mb-6">
+                <!-- Book Cover -->
+                <div class="flex-shrink-0">
+                  <img v-if="bookDetails.cover_url" :src="bookDetails.cover_url" :alt="bookDetails.title"
+                    class="w-48 h-72 object-cover rounded-lg shadow-lg" />
+                  <div v-else class="w-48 h-72 bg-gray-200 rounded-lg flex items-center justify-center text-6xl">
                   </div>
                 </div>
 
-                <!-- Rating -->
-                <div v-if="bookDetails.rating" class="flex items-center gap-2 mb-6">
-                  <div class="flex">
-                    <span v-for="i in 5" :key="i" class="text-2xl"
-                      :class="i <= Math.round(bookDetails.rating) ? 'text-yellow-500' : 'text-gray-300'">
-                      ★
+                <!-- Book Info -->
+                <div class="flex-1 min-w-0">
+                  <h2 class="text-3xl font-bold text-gray-900 mb-2">
+                    {{ bookDetails.title }}
+                  </h2>
+                  <p v-if="bookDetails.authors?.length" class="text-lg text-gray-600 mb-4">
+                    by {{ bookDetails.authors.join(', ') }}
+                  </p>
+
+                  <!-- Metadata -->
+                  <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
+                    <div v-if="bookDetails.published_date">
+                      {{ bookDetails.published_date }}
+                    </div>
+                    <div v-if="bookDetails.page_count">
+                      {{ bookDetails.page_count }} pages
+                    </div>
+                    <div v-if="bookDetails.publisher">
+                      {{ bookDetails.publisher }}
+                    </div>
+                  </div>
+
+                  <!-- Rating -->
+                  <div v-if="bookDetails.rating" class="flex items-center gap-2 mb-6">
+                    <div class="flex">
+                      <span v-for="i in 5" :key="i" class="text-2xl"
+                        :class="i <= Math.round(bookDetails.rating) ? 'text-yellow-500' : 'text-gray-300'">
+                        ★
+                      </span>
+                    </div>
+                    <span class="text-lg font-semibold">{{ bookDetails.rating }}</span>
+                    <span v-if="bookDetails.ratings_count" class="text-sm text-gray-500">
+                      ({{ bookDetails.ratings_count }} ratings)
                     </span>
                   </div>
-                  <span class="text-lg font-semibold">{{ bookDetails.rating }}</span>
-                  <span v-if="bookDetails.ratings_count" class="text-sm text-gray-500">
-                    ({{ bookDetails.ratings_count }} ratings)
-                  </span>
-                </div>
 
-                <!-- Categories -->
-                <div v-if="bookDetails.categories?.length" class="flex flex-wrap gap-2 mb-6">
-                  <span v-for="category in bookDetails.categories" :key="category"
-                    class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full">
-                    {{ category }}
-                  </span>
-                </div>
+                  <!-- Categories -->
+                  <div v-if="bookDetails.categories?.length" class="flex flex-wrap gap-2 mb-6">
+                    <span v-for="category in bookDetails.categories" :key="category"
+                      class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full">
+                      {{ category }}
+                    </span>
+                  </div>
 
-                <!-- Action Buttons -->
-                <div class="flex flex-wrap gap-3">
-                  <PrimaryButton @click="$emit('log', bookDetails)">
-                    Log This Book
-                  </PrimaryButton>
-                  <OutlineButton @click="showAddToList = true">
-                    Add to List
-                  </OutlineButton>
+                  <!-- Action Buttons -->
+                  <div class="flex flex-wrap gap-3">
+                    <PrimaryButton @click="$emit('log', bookDetails)">
+                      Log This Book
+                    </PrimaryButton>
+                    <OutlineButton @click="showAddToList = true">
+                      Add to List
+                    </OutlineButton>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div v-if="bookDetails.description" class="mt-6">
+                <h3 class="text-lg font-semibold mb-3">Description</h3>
+                <p class="text-gray-700 leading-relaxed whitespace-pre-line">
+                  {{ bookDetails.description }}
+                </p>
+              </div>
+
+              <!-- ISBN -->
+              <div v-if="bookDetails.isbn_10 || bookDetails.isbn_13" class="mt-6 pt-6 border-t">
+                <h3 class="text-sm font-semibold text-gray-500 mb-2">ISBNS</h3>
+                <div class="flex gap-4 text-sm text-gray-600">
+                  <div v-if="bookDetails.isbn_10">ISBN-10: {{ bookDetails.isbn_10 }}</div>
+                  <div v-if="bookDetails.isbn_13">ISBN-13: {{ bookDetails.isbn_13 }}</div>
                 </div>
               </div>
             </div>
 
-            <!-- Description -->
-            <div v-if="bookDetails.description" class="mt-6">
-              <h3 class="text-lg font-semibold mb-3">Description</h3>
-              <p class="text-gray-700 leading-relaxed whitespace-pre-line">
-                {{ bookDetails.description }}
-              </p>
+            <!-- Error State -->
+            <div v-else-if="error" class="p-12 text-center">
+              <div class="text-4xl mb-4">😕</div>
+              <p class="text-gray-600">{{ error }}</p>
+              <SecondaryButton @click="$emit('close')" class="mt-4">
+                Close
+              </SecondaryButton>
             </div>
 
-            <!-- ISBN -->
-            <div v-if="bookDetails.isbn_10 || bookDetails.isbn_13" class="mt-6 pt-6 border-t">
-              <h3 class="text-sm font-semibold text-gray-500 mb-2">ISBNS</h3>
-              <div class="flex gap-4 text-sm text-gray-600">
-                <div v-if="bookDetails.isbn_10">ISBN-10: {{ bookDetails.isbn_10 }}</div>
-                <div v-if="bookDetails.isbn_13">ISBN-13: {{ bookDetails.isbn_13 }}</div>
-              </div>
-            </div>
+            <!-- Close Button -->
+            <button @click="$emit('close')"
+              class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
+        </transition>
+      </div>
 
-          <!-- Error State -->
-          <div v-else-if="error" class="p-12 text-center">
-            <div class="text-4xl mb-4">😕</div>
-            <p class="text-gray-600">{{ error }}</p>
-            <SecondaryButton @click="$emit('close')" class="mt-4">
-              Close
-            </SecondaryButton>
-          </div>
-
-          <!-- Close Button -->
-          <button @click="$emit('close')"
-            class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </transition>
-    </div>
-
-    <!-- Add to List Modal -->
-    <div v-if="showAddToList" @click="closeAddToListModal"
-      class="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div @click.stop class="bg-dark-900 text-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">{{ selectedListForNotes ? 'Add Your Note' : 'Add to List' }}</h3>
-          <button @click="closeAddToListModal" class="text-dark-400 hover:text-white transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-
-        <!-- View for adding curator notes -->
-        <div v-if="selectedListForNotes">
-          <p class="text-sm text-dark-300 mb-4">
-            You're adding <strong>{{ bookDetails.title }}</strong> to <strong>{{ selectedListForNotes.name }}</strong>.
-          </p>
-          <TextArea v-model="curatorNotes" placeholder="Why is this book on the list? What does it mean to you?"
-            :rows="5" />
-          <div class="flex justify-end gap-3 mt-4">
-            <SecondaryButton @click="selectedListForNotes = null">Back</SecondaryButton>
-            <PrimaryButton @click="addBookToList(selectedListForNotes.id)">Add Book</PrimaryButton>
-          </div>
-        </div>
-
-        <!-- View for selecting a list -->
-        <div v-else>
-          <div v-if="loadingLists" class="text-center py-4">
-            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            <p class="mt-2 text-sm text-dark-400">Loading lists...</p>
-          </div>
-
-          <div v-else-if="userLists.length > 0" class="space-y-3 max-h-64 overflow-y-auto">
-            <div v-for="list in userLists" :key="list.id" @click="selectListForNotes(list)"
-              class="p-3 bg-dark-800 border border-dark-700 rounded-lg hover:bg-dark-700 cursor-pointer transition-colors">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="font-medium">{{ list.name }}</h4>
-                  <p v-if="list.description" class="text-sm text-dark-400 line-clamp-1">{{ list.description }}</p>
-                  <p class="text-xs text-dark-500">{{ list.items_count || 0 }} books</p>
-                </div>
-                <div class="text-dark-400">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="text-center py-4">
-            <p class="text-dark-300 mb-4">You don't have any lists yet.</p>
-            <button @click="createNewList" class="btn-primary text-sm">
-              Create Your First List
+      <!-- Add to List Modal -->
+      <div v-if="showAddToList" @click="closeAddToListModal"
+        class="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div @click.stop class="bg-dark-900 text-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">{{ selectedListForNotes ? 'Add Your Note' : 'Add to List' }}</h3>
+            <button @click="closeAddToListModal" class="text-dark-400 hover:text-white transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
             </button>
           </div>
 
-          <div class="mt-4 pt-4 border-t border-dark-800">
-            <button @click="createNewList" class="w-full btn-secondary text-sm">
-              Create New List
-            </button>
+          <!-- View for adding curator notes -->
+          <div v-if="selectedListForNotes">
+            <p class="text-sm text-dark-300 mb-4">
+              You're adding <strong>{{ bookDetails.title }}</strong> to <strong>{{ selectedListForNotes.name
+                }}</strong>.
+            </p>
+            <TextArea v-model="curatorNotes" placeholder="Why is this book on the list? What does it mean to you?"
+              :rows="5" />
+            <div class="flex justify-end gap-3 mt-4">
+              <SecondaryButton @click="selectedListForNotes = null">Back</SecondaryButton>
+              <PrimaryButton @click="addBookToList(selectedListForNotes.id)">Add Book</PrimaryButton>
+            </div>
+          </div>
+
+          <!-- View for selecting a list -->
+          <div v-else>
+            <div v-if="loadingLists" class="text-center py-4">
+              <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <p class="mt-2 text-sm text-dark-400">Loading lists...</p>
+            </div>
+
+            <div v-else-if="userLists.length > 0" class="space-y-3 max-h-64 overflow-y-auto">
+              <div v-for="list in userLists" :key="list.id" @click="selectListForNotes(list)"
+                class="p-3 bg-dark-800 border border-dark-700 rounded-lg hover:bg-dark-700 cursor-pointer transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="font-medium">{{ list.name }}</h4>
+                    <p v-if="list.description" class="text-sm text-dark-400 line-clamp-1">{{ list.description }}</p>
+                    <p class="text-xs text-dark-500">{{ list.items_count || 0 }} books</p>
+                  </div>
+                  <div class="text-dark-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="text-center py-4">
+              <p class="text-dark-300 mb-4">You don't have any lists yet.</p>
+              <button @click="createNewList" class="btn-primary text-sm">
+                Create Your First List
+              </button>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-dark-800">
+              <button @click="createNewList" class="w-full btn-secondary text-sm">
+                Create New List
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- List Creation Modal -->
-    <ListModal :show="showCreateListModal" :book="bookDetails" @close="showCreateListModal = false"
-      @success="handleListCreated" />
+      <!-- List Creation Modal -->
+      <ListModal :show="showCreateListModal" :book="bookDetails" @close="showCreateListModal = false"
+        @success="handleListCreated" />
+    </div>
   </transition>
 </template>
 
