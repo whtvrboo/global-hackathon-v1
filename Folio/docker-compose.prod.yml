@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/${GITHUB_REPOSITORY}/folio-backend:latest
+    image: moelsena/folio_be:latest
     container_name: folio-api-prod
     ports:
       - "8080:8080"
@@ -50,7 +50,7 @@ services:
       retries: 3
 
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/folio-frontend:latest
+    image: moelsena/folio_fe:latest
     container_name: folio-frontend-prod
     ports:
       - "80:80"

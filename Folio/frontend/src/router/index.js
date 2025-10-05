@@ -20,6 +20,27 @@ const router = createRouter({
       meta: { public: true }
     },
     {
+      path: '/profile',
+      redirect: async (to) => {
+        const authStore = useAuthStore()
+        
+        // If user data is not loaded yet, try to fetch it
+        if (!authStore.user && authStore.isAuthenticated) {
+          try {
+            await authStore.fetchUser()
+          } catch (error) {
+            console.error('Failed to fetch user data:', error)
+            return '/login'
+          }
+        }
+        
+        if (authStore.user?.username) {
+          return `/profile/${authStore.user.username}`
+        }
+        return '/login'
+      }
+    },
+    {
       path: '/profile/:username',
       name: 'profile',
       component: ProfileView,

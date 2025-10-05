@@ -447,6 +447,13 @@ const fetchProfile = async () => {
   error.value = null
   try {
     const username = route.params.username
+
+    // Check if username is provided
+    if (!username) {
+      error.value = 'Username is required'
+      return
+    }
+
     const profileResponse = await axios.get(`/api/users/${username}`)
     user.value = profileResponse.data
     isFollowing.value = profileResponse.data.is_following

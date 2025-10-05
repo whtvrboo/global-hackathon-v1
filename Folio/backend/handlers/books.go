@@ -144,23 +144,25 @@ func (h *BookHandler) searchLocalBooks(ctx context.Context, query string) ([]Boo
 	searchQuery := "%" + query + "%"
 	
 	sql := `
-		SELECT id, title, author, description, cover_url, isbn, published_date, pages, categories
+		SELECT id, title, authors, description, cover_url, isbn_10, isbn_13, published_date, page_count, categories
 		FROM books 
 		WHERE LOWER(title) LIKE LOWER($1) 
-		   OR LOWER(author) LIKE LOWER($1)
+		   OR EXISTS (SELECT 1 FROM unnest(authors) AS author WHERE LOWER(author) LIKE LOWER($1))
 		   OR LOWER(description) LIKE LOWER($1)
 		ORDER BY 
 			CASE 
 				WHEN LOWER(title) LIKE LOWER($1) THEN 1
-				WHEN LOWER(author) LIKE LOWER($1) THEN 2
+				WHEN EXISTS (SELECT 1 FROM unnest(authors) AS author WHERE LOWER(author) LIKE LOWER($1)) THEN 2
 				ELSE 3
 			END,
 			title
 		LIMIT 20
 	`
 	
+	fmt.Printf("DEBUG: Searching for query: %s\n", searchQuery)
 	rows, err := h.DB.Query(ctx, sql, searchQuery)
 	if err != nil {
+		fmt.Printf("DEBUG: Database query error: %v\n", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -170,39 +172,37 @@ func (h *BookHandler) searchLocalBooks(ctx context.Context, query string) ([]Boo
 		var book struct {
 			ID            string
 			Title         string
-			Author        string
+			Authors       []string
 			Description   string
 			CoverURL      string
-			ISBN          string
+			ISBN10        string
+			ISBN13        string
 			PublishedDate string
-			Pages         int
-			Categories    string
+			PageCount     int
+			Categories    []string
 		}
 
 		err := rows.Scan(
-			&book.ID, &book.Title, &book.Author, &book.Description,
-			&book.CoverURL, &book.ISBN, &book.PublishedDate, &book.Pages, &book.Categories,
+			&book.ID, &book.Title, &book.Authors, &book.Description,
+			&book.CoverURL, &book.ISBN10, &book.ISBN13, &book.PublishedDate, &book.PageCount, &book.Categories,
 		)
 		if err != nil {
+			fmt.Printf("DEBUG: Row scan error: %v\n", err)
 			continue
 		}
 
-		// Parse categories JSON
-		var categories []string
-		if book.Categories != "" {
-			json.Unmarshal([]byte(book.Categories), &categories)
-		}
-
+		fmt.Printf("DEBUG: Found book: %s by %v\n", book.Title, book.Authors)
 		books = append(books, BookSearchResult{
 			ID:            book.ID,
 			Title:         book.Title,
-			Authors:       []string{book.Author},
+			Authors:       book.Authors,
 			Description:   book.Description,
 			CoverURL:      book.CoverURL,
 			PublishedDate: book.PublishedDate,
 		})
 	}
 
+	fmt.Printf("DEBUG: Found %d local books\n", len(books))
 	return books, nil
 }
 
@@ -218,18 +218,17 @@ func (h *BookHandler) cacheBooks(ctx context.Context, books []BookSearchResult) 
 
 		// Insert new book
 		_, err = h.DB.Exec(ctx, `
-			INSERT INTO books (id, title, author, description, cover_url, isbn, published_date, pages, categories, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+			INSERT INTO books (id, title, authors, description, cover_url, published_date, page_count, categories, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 		`, 
 			book.ID,
 			book.Title,
-			book.Authors[0], // Take first author
+			book.Authors, // Use the authors array directly
 			book.Description,
 			book.CoverURL,
-			"", // ISBN not available from Google Books API in this format
 			book.PublishedDate,
-			0, // Pages not available
-			"[]", // Empty categories for now
+			0, // Page count not available from search results
+			[]string{}, // Empty categories array
 		)
 		
 		if err != nil {

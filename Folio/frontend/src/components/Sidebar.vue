@@ -27,7 +27,8 @@
                     </div>
                 </router-link>
 
-                <router-link v-if="authStore.isAuthenticated" :to="`/profile/${authStore.user?.username}`"
+                <router-link v-if="authStore.isAuthenticated && authStore.user?.username"
+                    :to="`/profile/${authStore.user.username}`"
                     class="group relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200"
                     :class="route.path.includes('/profile/') ? 'bg-accent-red shadow-lg shadow-accent-red/25' : 'bg-dark-800/50 hover:bg-dark-700/70 hover:scale-105'">
                     <svg class="h-5 w-5 transition-colors"
@@ -43,6 +44,20 @@
                         Profile
                     </div>
                 </router-link>
+                <button v-else-if="authStore.isAuthenticated" @click="$router.push('/profile')"
+                    class="group relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 bg-dark-800/50 hover:bg-dark-700/70 hover:scale-105">
+                    <svg class="h-5 w-5 transition-colors text-dark-300 group-hover:text-white" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
+                        </path>
+                    </svg>
+                    <!-- Tooltip -->
+                    <div
+                        class="absolute left-14 bg-dark-800 text-white text-sm px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                        Profile
+                    </div>
+                </button>
 
                 <!-- Logout Button -->
                 <button v-if="authStore.isAuthenticated" @click="authStore.logout()"

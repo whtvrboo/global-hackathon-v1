@@ -140,6 +140,7 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 		})
 	}
 
+
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
 

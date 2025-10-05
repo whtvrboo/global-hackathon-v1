@@ -77,15 +77,23 @@
                 <span class="text-xs">Discover</span>
             </router-link>
 
-            <router-link :to="`/profile/${authStore.user?.username}`"
+            <router-link v-if="authStore.user?.username" :to="`/profile/${authStore.user.username}`"
                 class="flex flex-col items-center gap-1 p-3 transition-colors"
-                :class="isActive(`/profile/${authStore.user?.username}`) ? 'text-accent-red' : 'text-dark-400 hover:text-white'">
+                :class="isActive(`/profile/${authStore.user.username}`) ? 'text-accent-red' : 'text-dark-400 hover:text-white'">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                 </svg>
                 <span class="text-xs">Profile</span>
             </router-link>
+            <button v-else @click="$router.push('/profile')"
+                class="flex flex-col items-center gap-1 p-3 transition-colors text-dark-400 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span class="text-xs">Profile</span>
+            </button>
         </div>
     </nav>
 </template>

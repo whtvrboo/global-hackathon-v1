@@ -134,7 +134,7 @@
                                             <span class="text-sm text-dark-400">@{{ review.user.username }}</span>
                                             <span class="text-sm text-dark-400">•</span>
                                             <span class="text-sm text-dark-400">{{ formatDate(review.created_at)
-                                                }}</span>
+                                            }}</span>
                                         </div>
 
                                         <!-- Rating & Status -->
@@ -155,12 +155,6 @@
                                         <div v-if="review.review" class="text-dark-100 mb-4">
                                             <p class="whitespace-pre-line text-base leading-relaxed">{{ review.review }}
                                             </p>
-                                        </div>
-
-                                        <!-- Notes -->
-                                        <div v-if="review.notes"
-                                            class="text-sm text-dark-300 bg-dark-700 p-4 rounded-lg border border-dark-600">
-                                            <p class="whitespace-pre-line">{{ review.notes }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -351,7 +345,7 @@
                 <div v-if="selectedListForNotes">
                     <p class="text-sm text-dark-300 mb-4">
                         You're adding <strong>{{ bookDetails.title }}</strong> to <strong>{{ selectedListForNotes.name
-                        }}</strong>.
+                            }}</strong>.
                     </p>
                     <TextArea v-model="curatorNotes"
                         placeholder="Why is this book on the list? What does it mean to you?" :rows="5" />

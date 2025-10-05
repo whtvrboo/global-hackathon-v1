@@ -75,8 +75,10 @@ export const useAuthStore = defineStore('auth', () => {
             // User is authenticated, use regular endpoint
             console.log('Using regular user endpoint')
             const response = await axios.get('/api/me')
+            console.log('Regular user response:', response.data)
             user.value = response.data
             isGuest.value = false
+            console.log('User data set:', user.value)
           }
         } catch (parseError) {
           console.error('Failed to parse JWT token:', parseError)
@@ -93,6 +95,14 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (error) {
       console.error('Failed to fetch user:', error)
+      
+      // If /api/me returns 404, the user might not exist in the database
+      // This can happen if the JWT token is valid but the user was deleted
+      if (error.response?.status === 404) {
+        console.log('User not found in database, clearing token and redirecting to login')
+        logout()
+        return
+      }
       
       // Parse JWT token to determine correct guest status
       let correctGuestStatus = false
@@ -120,7 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
       } catch (fallbackError) {
         console.error('Failed to fetch user with fallback:', fallbackError)
         // If both fail, clear token
-        if (fallbackError.response?.status === 401) {
+        if (fallbackError.response?.status === 401 || fallbackError.response?.status === 404) {
           logout()
         }
       }

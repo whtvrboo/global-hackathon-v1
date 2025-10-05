@@ -126,17 +126,17 @@
                   <!-- Book Covers Grid -->
                   <div v-if="item.preview_books && item.preview_books.length > 0" class="space-y-2">
                     <!-- First row - show up to 4 books -->
-                     <div class="flex gap-2">
-                       <div v-for="book in item.preview_books.slice(0, 4)" :key="book.id" class="flex-shrink-0">
-                         <div class="cursor-pointer" @click.stop="navigateToBook(book.id)">
-                           <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
-                             class="w-12 h-16 object-cover rounded-md shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105" />
-                           <div v-else
-                             class="w-12 h-16 bg-gradient-to-br from-dark-800 to-dark-700 rounded-md flex items-center justify-center hover:from-dark-700 hover:to-dark-600 transition-all duration-200 hover:scale-105">
-                             <span class="text-sm text-dark-400">📖</span>
-                           </div>
-                         </div>
-                       </div>
+                    <div class="flex gap-2">
+                      <div v-for="book in item.preview_books.slice(0, 4)" :key="book.id" class="flex-shrink-0">
+                        <div class="cursor-pointer" @click.stop="navigateToBook(book.id)">
+                          <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
+                            class="w-12 h-16 object-cover rounded-md shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105" />
+                          <div v-else
+                            class="w-12 h-16 bg-gradient-to-br from-dark-800 to-dark-700 rounded-md flex items-center justify-center hover:from-dark-700 hover:to-dark-600 transition-all duration-200 hover:scale-105">
+                            <span class="text-sm text-dark-400">📖</span>
+                          </div>
+                        </div>
+                      </div>
 
                       <!-- Show count if more than 4 books -->
                       <div v-if="item.items_count > 4"
@@ -145,18 +145,18 @@
                       </div>
                     </div>
 
-                     <!-- Second row - show additional books if more than 4 -->
-                     <div v-if="item.preview_books.length > 4" class="flex gap-2">
-                       <div v-for="book in item.preview_books.slice(4, 8)" :key="book.id" class="flex-shrink-0">
-                         <div class="cursor-pointer" @click.stop="navigateToBook(book.id)">
-                           <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
-                             class="w-10 h-14 object-cover rounded-md shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105" />
-                           <div v-else
-                             class="w-10 h-14 bg-gradient-to-br from-dark-800 to-dark-700 rounded-md flex items-center justify-center hover:from-dark-700 hover:to-dark-600 transition-all duration-200 hover:scale-105">
-                             <span class="text-xs text-dark-400">📖</span>
-                           </div>
-                         </div>
-                       </div>
+                    <!-- Second row - show additional books if more than 4 -->
+                    <div v-if="item.preview_books.length > 4" class="flex gap-2">
+                      <div v-for="book in item.preview_books.slice(4, 8)" :key="book.id" class="flex-shrink-0">
+                        <div class="cursor-pointer" @click.stop="navigateToBook(book.id)">
+                          <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
+                            class="w-10 h-14 object-cover rounded-md shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105" />
+                          <div v-else
+                            class="w-10 h-14 bg-gradient-to-br from-dark-800 to-dark-700 rounded-md flex items-center justify-center hover:from-dark-700 hover:to-dark-600 transition-all duration-200 hover:scale-105">
+                            <span class="text-xs text-dark-400">📖</span>
+                          </div>
+                        </div>
+                      </div>
 
                       <!-- Show count if more than 8 books -->
                       <div v-if="item.items_count > 8"
@@ -207,7 +207,8 @@
                 <!-- Book Card -->
                 <div class="flex gap-4">
                   <div class="relative">
-                    <div class="w-20 h-32 bg-dark-800 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer">
+                    <div
+                      class="w-20 h-32 bg-dark-800 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer">
                       <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
                         class="w-full h-full object-cover" />
                       <div v-else
