@@ -2,6 +2,12 @@
 
 A modern social reading platform where **curated lists and authentic reviews** take center stage. Built with the "Sovereign Stack" philosophy - fully self-hosted, beautifully designed, and focused on meaningful book discovery.
 
+## 🎬 Demo Video
+
+- Watch: [Folio Demo Video](https://mohamad.dev/folio.mp4)
+
+<video src="https://mohamad.dev/folio.mp4" controls width="800" style="max-width: 100%; height: auto;"></video>
+
 ## ✨ What Makes Folio Different
 
 **Lists as Art.** Every list is a beautifully designed, shareable page that showcases a curator's taste. No spreadsheets, no boring grids - just magazine-quality presentation.
