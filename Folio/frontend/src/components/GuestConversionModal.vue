@@ -44,6 +44,7 @@
 
 <script setup>
 import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
 import PrimaryButton from './ui/PrimaryButton.vue'
 import SecondaryButton from './ui/SecondaryButton.vue'
 
@@ -54,17 +55,9 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const convertToFullUser = () => {
-  // Store the guest session ID for the conversion
-  const guestSessionId = authStore.user?.guest_session_id
-  if (guestSessionId) {
-    localStorage.setItem('guest_session_id', guestSessionId)
-  }
-
-  // Redirect to Google OAuth with guest conversion
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost'
-  const convertUrl = `${apiUrl}/api/auth/google/convert?guest_session_id=${guestSessionId}`
-  window.location.href = convertUrl
+  router.push('/login')
 }
 </script>

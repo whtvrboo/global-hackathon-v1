@@ -126,8 +126,8 @@ func RunMigrations(config *Config) error {
 		log.Printf("✓ Database migrations completed (version: %d)", version)
 	}
 
-    // Optionally run seed data after successful migrations
-    if strings.EqualFold(getEnv("DB_AUTO_SEED", "false"), "true") {
+	// Optionally run seed data after successful migrations
+	if isTruthy(getEnv("DB_AUTO_SEED", "false")) {
         if err := runSeeds(config); err != nil {
             return err
         }
@@ -163,6 +163,16 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// isTruthy returns true if the string looks like a true value
+func isTruthy(v string) bool {
+    switch strings.ToLower(strings.TrimSpace(v)) {
+    case "1", "t", "true", "y", "yes", "on":
+        return true
+    default:
+        return false
+    }
 }
 
 
