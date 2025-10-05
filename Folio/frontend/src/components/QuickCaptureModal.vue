@@ -261,7 +261,7 @@ onUnmounted(() => {
 const fetchRecentBooks = async () => {
     try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me/recents`, {
+        const response = await fetch('/api/users/me/recents', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -340,7 +340,7 @@ const saveAnnotation = async () => {
             tags: tags.value
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/annotations/capture`, {
+        const response = await fetch('/api/annotations/capture', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

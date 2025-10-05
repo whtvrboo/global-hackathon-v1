@@ -124,7 +124,8 @@ import { useToastStore } from '../stores/toast'
 const props = defineProps({
     show: Boolean,
     list: Object, // For editing existing list
-    book: Object  // For adding book to new list
+    book: Object,  // For adding book to new list
+    prefilledData: Object // For pre-filling from thread
 })
 
 const emit = defineEmits(['close', 'success'])
@@ -152,6 +153,14 @@ watch(() => props.show, (newShow) => {
             form.is_public = props.list.is_public !== false
             form.header_image_url = props.list.header_image_url || ''
             form.theme_color = props.list.theme_color || '#6366f1'
+        } else if (props.prefilledData) {
+            // Creating new list with pre-filled data from thread
+            isEditing.value = false
+            form.name = props.prefilledData.title || ''
+            form.description = props.prefilledData.description || ''
+            form.is_public = true
+            form.header_image_url = ''
+            form.theme_color = '#6366f1'
         } else {
             // Creating new list
             isEditing.value = false
@@ -205,6 +214,17 @@ const handleSubmit = async () => {
                 await axios.post(`/api/lists/${response.data.id}/items`, {
                     book_id: props.book.id
                 })
+            }
+
+            // If pre-filled books were provided, add them to the new list
+            if (props.prefilledData?.books && props.prefilledData.books.length > 0) {
+                for (const bookData of props.prefilledData.books) {
+                    await axios.post(`/api/lists/${response.data.id}/items`, {
+                        book_id: bookData.id,
+                        curator_note: bookData.annotations ?
+                            bookData.annotations.map(a => a.content).join('\n\n') : ''
+                    })
+                }
             }
 
             toastStore.success(`List "${form.name}" created successfully!`)

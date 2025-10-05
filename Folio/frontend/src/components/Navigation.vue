@@ -1,6 +1,6 @@
 <template>
-    <!-- Header Navigation -->
-    <header v-if="shouldShowNavigation" class="glass-strong border-b border-dark-800 sticky top-0 z-50">
+    <!-- Header Navigation (Mobile only) -->
+    <header v-if="shouldShowNavigation" class="lg:hidden glass-strong border-b border-dark-800 sticky top-0 z-50">
         <div class="container-mobile max-w-7xl mx-auto">
             <div class="flex items-center justify-between py-4">
                 <!-- Logo -->
@@ -15,8 +15,6 @@
                 <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center gap-6">
                     <router-link to="/feed" class="btn-ghost">Discover</router-link>
-                    <router-link v-if="authStore.isAuthenticated" to="/notebook"
-                        class="btn-ghost">Notebook</router-link>
                     <router-link v-if="authStore.isAuthenticated" :to="`/profile/${authStore.user?.username}`"
                         class="btn-ghost">Profile</router-link>
                     <router-link v-if="!authStore.isAuthenticated" to="/login" class="btn-primary">Login</router-link>
@@ -45,8 +43,6 @@
             <nav class="container-mobile max-w-7xl mx-auto py-4">
                 <div class="flex flex-col gap-4">
                     <router-link to="/feed" @click="closeMobileMenu" class="btn-ghost text-left">Discover</router-link>
-                    <router-link v-if="authStore.isAuthenticated" to="/notebook" @click="closeMobileMenu"
-                        class="btn-ghost text-left">Notebook</router-link>
                     <router-link v-if="authStore.isAuthenticated" :to="`/profile/${authStore.user?.username}`"
                         @click="closeMobileMenu" class="btn-ghost text-left">Profile</router-link>
                     <router-link v-if="!authStore.isAuthenticated" to="/login" @click="closeMobileMenu"
@@ -79,16 +75,6 @@
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
                 <span class="text-xs">Discover</span>
-            </router-link>
-
-            <router-link to="/notebook" class="flex flex-col items-center gap-1 p-3 transition-colors"
-                :class="isActive('/notebook') ? 'text-indigo-500' : 'text-dark-400 hover:text-white'">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                    </path>
-                </svg>
-                <span class="text-xs">Notebook</span>
             </router-link>
 
             <router-link :to="`/profile/${authStore.user?.username}`"

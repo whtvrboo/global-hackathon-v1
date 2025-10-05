@@ -7,13 +7,18 @@
                     <div>
                         <h1 class="text-heading-1">My Notebook</h1>
                         <p class="mt-1 text-body text-dark-400">
-                            Organize your unassociated notes and thoughts
+                            Discover the patterns in your thinking
                         </p>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <span class="text-body text-dark-400">
-                            {{ unassociatedNotes.length }} unsorted note{{ unassociatedNotes.length !== 1 ? 's' : '' }}
-                        </span>
+                        <button @click="showUnassociatedNotes = !showUnassociatedNotes"
+                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-dark-400 hover:text-white bg-dark-800 hover:bg-dark-700 rounded-lg transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            {{ showUnassociatedNotes ? 'Hide' : 'Show' }} Unsorted
+                        </button>
                     </div>
                 </div>
             </div>
@@ -21,7 +26,65 @@
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Primary View: Theme Discovery -->
+            <div v-if="!showUnassociatedNotes" class="space-y-8">
+                <!-- Theme Cloud -->
+                <ThemeCloud :themes="themes" :is-loading="isLoadingThemes" @open-capture="openQuickCapture"
+                    @theme-selected="onThemeSelected" />
+
+                <!-- Recent Activity -->
+                <div v-if="recentAnnotations.length > 0"
+                    class="bg-dark-900/50 backdrop-blur-sm rounded-lg border border-dark-800 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-heading-3 text-white">Recent Thoughts</h2>
+                        <button @click="showAllRecent = !showAllRecent"
+                            class="text-sm text-accent-blue hover:text-accent-blue/80">
+                            {{ showAllRecent ? 'Show less' : 'Show all' }}
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div v-for="annotation in displayedRecentAnnotations" :key="annotation.id"
+                            class="p-4 bg-dark-800/50 border border-dark-700 rounded-lg hover:border-accent-blue/50 transition-colors">
+                            <div class="flex items-start justify-between mb-2">
+                                <span :class="[
+                                    'inline-flex items-center px-2 py-1 text-xs font-medium rounded-full',
+                                    annotation.type === 'highlight'
+                                        ? 'bg-yellow-500/20 text-yellow-400'
+                                        : 'bg-accent-blue/20 text-accent-blue'
+                                ]">
+                                    {{ annotation.type === 'highlight' ? '✨ Highlight' : '📝 Note' }}
+                                </span>
+                                <span class="text-xs text-dark-400">{{ formatDate(annotation.created_at) }}</span>
+                            </div>
+
+                            <p class="text-sm text-white mb-3 line-clamp-2">{{ annotation.content }}</p>
+
+                            <div class="flex items-center justify-between">
+                                <div v-if="annotation.tags && annotation.tags.length > 0" class="flex flex-wrap gap-1">
+                                    <span v-for="tag in annotation.tags.slice(0, 3)" :key="tag"
+                                        class="inline-flex items-center px-2 py-0.5 text-xs text-accent-blue bg-accent-blue/10 rounded-full">
+                                        #{{ tag }}
+                                    </span>
+                                    <span v-if="annotation.tags.length > 3" class="text-xs text-dark-400">
+                                        +{{ annotation.tags.length - 3 }} more
+                                    </span>
+                                </div>
+
+                                <div v-if="annotation.book" class="flex items-center space-x-2">
+                                    <img v-if="annotation.book.cover_url" :src="annotation.book.cover_url"
+                                        :alt="annotation.book.title" class="w-6 h-8 object-cover rounded" />
+                                    <span class="text-xs text-dark-400 truncate max-w-32">{{ annotation.book.title
+                                    }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Secondary View: Unassociated Notes Management -->
+            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Left Column: Unassociated Notes -->
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
@@ -180,14 +243,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- Quick Capture Modal -->
+        <QuickCaptureModal :show="showQuickCapture" @close="showQuickCapture = false" @saved="handleCaptureSuccess" />
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useToastStore } from '../stores/toast'
+import ThemeCloud from '../components/ThemeCloud.vue'
+import QuickCaptureModal from '../components/QuickCaptureModal.vue'
 
 const toast = useToastStore()
+
+// No longer emitting events since we handle QuickCaptureModal directly
 
 // State
 const unassociatedNotes = ref([])
@@ -198,6 +268,14 @@ const userBooks = ref([])
 const isLoading = ref(false)
 const isLoadingBooks = ref(false)
 const removingIds = ref([])
+
+// New state for theme discovery
+const themes = ref([])
+const isLoadingThemes = ref(false)
+const recentAnnotations = ref([])
+const showUnassociatedNotes = ref(false)
+const showAllRecent = ref(false)
+const showQuickCapture = ref(false)
 
 // Computed
 const filteredNotes = computed(() => {
@@ -220,11 +298,62 @@ const filteredBooks = computed(() => {
     )
 })
 
+const displayedRecentAnnotations = computed(() => {
+    return showAllRecent.value ? recentAnnotations.value : recentAnnotations.value.slice(0, 5)
+})
+
 // Lifecycle
 onMounted(() => {
+    fetchThemes()
+    fetchRecentAnnotations()
     fetchUnassociatedNotes()
     fetchUserBooks()
 })
+
+// Fetch user themes
+const fetchThemes = async () => {
+    isLoadingThemes.value = true
+
+    try {
+        const token = localStorage.getItem('token')
+        const response = await fetch('/api/users/me/themes', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+
+        if (response.ok) {
+            const data = await response.json()
+            themes.value = data.themes || []
+        } else {
+            throw new Error('Failed to fetch themes')
+        }
+    } catch (error) {
+        console.error('Error fetching themes:', error)
+        toast.error('Failed to load themes')
+    } finally {
+        isLoadingThemes.value = false
+    }
+}
+
+// Fetch recent annotations
+const fetchRecentAnnotations = async () => {
+    try {
+        const token = localStorage.getItem('token')
+        const response = await fetch('/api/annotations/search?q=', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+
+        if (response.ok) {
+            const data = await response.json()
+            recentAnnotations.value = data.results || []
+        }
+    } catch (error) {
+        console.error('Error fetching recent annotations:', error)
+    }
+}
 
 // Fetch unassociated notes
 const fetchUnassociatedNotes = async () => {
@@ -233,7 +362,7 @@ const fetchUnassociatedNotes = async () => {
     try {
         const token = localStorage.getItem('token')
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/annotations/unassociated`,
+            `/api/annotations/unassociated`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -266,7 +395,7 @@ const fetchUserBooks = async () => {
         if (!username) return
 
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/users/${username}/logs`,
+            `/api/users/${username}/logs`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -323,7 +452,7 @@ const assignToBook = async (book) => {
     try {
         const token = localStorage.getItem('token')
         const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/annotations/${selectedNote.value.id}`,
+            `/api/annotations/${selectedNote.value.id}`,
             {
                 method: 'PATCH',
                 headers: {
@@ -363,6 +492,25 @@ const assignToBook = async (book) => {
         console.error('Error assigning note:', error)
         toast.error('Failed to assign note to book')
     }
+}
+
+// Theme selection handler
+const onThemeSelected = (theme) => {
+    // This will be handled by the ThemeCloud component's navigation
+    console.log('Theme selected:', theme)
+}
+
+// Quick capture handlers
+const openQuickCapture = () => {
+    showQuickCapture.value = true
+}
+
+const handleCaptureSuccess = () => {
+    showQuickCapture.value = false
+    // Refresh themes and recent annotations
+    fetchThemes()
+    fetchRecentAnnotations()
+    fetchUnassociatedNotes()
 }
 
 // Format date

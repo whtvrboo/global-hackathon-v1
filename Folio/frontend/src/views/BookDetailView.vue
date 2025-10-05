@@ -1,31 +1,86 @@
 <template>
-    <div class="min-h-screen bg-dark-950">
-        <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center min-h-screen">
-            <div class="text-center">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red"></div>
-                <p class="mt-4 text-dark-300">Loading book details...</p>
+    <div v-if="loading" class="text-center p-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p class="mt-4 text-dark-300">Loading book details...</p>
+    </div>
+    <div v-else-if="error" class="text-center p-12">
+        <div class="text-4xl mb-4">😕</div>
+        <p class="text-dark-300">{{ error }}</p>
+    </div>
+    <div v-else-if="bookDetails" class="bg-dark-950 min-h-screen">
+        <!-- Book Hero Section -->
+        <div
+            class="relative w-full h-[40vh] text-white flex items-center justify-center text-center p-6 bg-gradient-to-br from-accent-blue via-accent-purple to-accent-red">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent"></div>
+            <div class="relative z-10 max-w-6xl mx-auto">
+                <div class="flex flex-col lg:flex-row items-center gap-8">
+                    <!-- Book Cover -->
+                    <div class="flex-shrink-0">
+                        <img v-if="bookDetails.cover_url" :src="bookDetails.cover_url" :alt="bookDetails.title"
+                            class="w-48 h-72 object-cover rounded-xl shadow-2xl border-2 border-white/20" />
+                        <div v-else
+                            class="w-48 h-72 bg-white/20 rounded-xl flex items-center justify-center text-6xl border-2 border-white/20 shadow-2xl">
+                            📚
+                        </div>
+                    </div>
+
+                    <!-- Book Info -->
+                    <div class="flex-1 text-left lg:text-center">
+                        <h1 class="text-3xl md:text-5xl font-bold leading-tight mb-3">
+                            {{ bookDetails.title }}
+                        </h1>
+                        <p v-if="bookDetails.authors?.length" class="text-lg md:text-xl text-white/90 mb-4">
+                            by {{ bookDetails.authors.join(', ') }}
+                        </p>
+
+                        <!-- Rating -->
+                        <div v-if="bookDetails.rating"
+                            class="flex items-center justify-center lg:justify-start gap-3 mb-4">
+                            <div class="flex">
+                                <span v-for="i in 5" :key="i" class="text-2xl"
+                                    :class="i <= Math.round(bookDetails.rating) ? 'text-accent-orange' : 'text-white/40'">
+                                    ★
+                                </span>
+                            </div>
+                            <span class="text-xl font-bold">{{ bookDetails.rating }}</span>
+                            <span v-if="bookDetails.ratings_count" class="text-sm text-white/70">
+                                ({{ bookDetails.ratings_count }} ratings)
+                            </span>
+                        </div>
+
+                        <!-- Categories -->
+                        <div v-if="bookDetails.categories?.length"
+                            class="flex flex-wrap justify-center lg:justify-start gap-2 mb-6">
+                            <span v-for="category in bookDetails.categories" :key="category"
+                                class="px-3 py-1 text-xs bg-white/20 text-white rounded-full border border-white/30 backdrop-blur-sm">
+                                {{ category }}
+                            </span>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                            <button @click="showLogModal = true"
+                                class="px-6 py-3 bg-white text-dark-950 rounded-lg font-semibold hover:bg-white/90 transition-all shadow-lg">
+                                📖 Log This Book
+                            </button>
+                            <button @click="showAddToList = true"
+                                class="px-6 py-3 bg-white/20 text-white rounded-lg border border-white/30 hover:bg-white/30 transition-all backdrop-blur-sm font-semibold">
+                                📋 Add to List
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Error State -->
-        <div v-else-if="error" class="flex items-center justify-center min-h-screen">
-            <div class="text-center">
-                <div class="text-4xl mb-4">😕</div>
-                <p class="text-dark-300 mb-4">{{ error }}</p>
-                <PrimaryButton @click="$router.push('/discover')">
-                    Back to Discover
-                </PrimaryButton>
-            </div>
-        </div>
-
-        <!-- Book Details -->
-        <div v-else-if="bookDetails" class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Book Content -->
+        <div class="container mx-auto max-w-7xl py-8 px-4">
             <!-- Breadcrumb -->
             <nav class="mb-6">
                 <ol class="flex items-center space-x-2 text-sm text-dark-400">
                     <li><router-link to="/discover"
-                            class="hover:text-accent-red transition-colors">Discover</router-link></li>
+                            class="hover:text-accent-red transition-colors">Discover</router-link>
+                    </li>
                     <li class="flex items-center">
                         <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd"
@@ -37,146 +92,74 @@
                 </ol>
             </nav>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Main Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Content - Reviews Focus -->
                 <div class="lg:col-span-2">
-                    <!-- Book Header -->
-                    <div class="card p-8 mb-6">
-                        <div class="flex gap-6">
-                            <!-- Book Cover -->
-                            <div class="flex-shrink-0">
-                                <img v-if="bookDetails.cover_url" :src="bookDetails.cover_url" :alt="bookDetails.title"
-                                    class="w-48 h-72 object-cover rounded-lg shadow-lg" />
-                                <div v-else
-                                    class="w-48 h-72 bg-dark-800 rounded-lg flex items-center justify-center text-6xl text-dark-400">
-                                    📚
-                                </div>
-                            </div>
-
-                            <!-- Book Info -->
-                            <div class="flex-1 min-w-0">
-                                <h1 class="text-3xl font-bold text-white mb-2">
-                                    {{ bookDetails.title }}
-                                </h1>
-                                <p v-if="bookDetails.authors?.length" class="text-lg text-dark-300 mb-4">
-                                    by {{ bookDetails.authors.join(', ') }}
-                                </p>
-
-                                <!-- Metadata -->
-                                <div class="flex flex-wrap gap-4 text-sm text-dark-300 mb-6">
-                                    <div v-if="bookDetails.published_date">
-                                        <span class="font-medium">Published:</span> {{ bookDetails.published_date }}
-                                    </div>
-                                    <div v-if="bookDetails.page_count">
-                                        <span class="font-medium">Pages:</span> {{ bookDetails.page_count }}
-                                    </div>
-                                    <div v-if="bookDetails.publisher">
-                                        <span class="font-medium">Publisher:</span> {{ bookDetails.publisher }}
-                                    </div>
-                                    <div v-if="bookDetails.language">
-                                        <span class="font-medium">Language:</span> {{ bookDetails.language }}
-                                    </div>
-                                </div>
-
-                                <!-- Rating -->
-                                <div v-if="bookDetails.rating" class="flex items-center gap-2 mb-6">
-                                    <div class="flex">
-                                        <span v-for="i in 5" :key="i" class="text-2xl"
-                                            :class="i <= Math.round(bookDetails.rating) ? 'text-accent-orange' : 'text-dark-400'">
-                                            ★
-                                        </span>
-                                    </div>
-                                    <span class="text-lg font-semibold">{{ bookDetails.rating }}</span>
-                                    <span v-if="bookDetails.ratings_count" class="text-sm text-dark-400">
-                                        ({{ bookDetails.ratings_count }} ratings)
-                                    </span>
-                                </div>
-
-                                <!-- Categories -->
-                                <div v-if="bookDetails.categories?.length" class="flex flex-wrap gap-2 mb-6">
-                                    <span v-for="category in bookDetails.categories" :key="category"
-                                        class="px-3 py-1 text-sm bg-dark-800 text-dark-200 rounded-full">
-                                        {{ category }}
-                                    </span>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="flex flex-wrap gap-3">
-                                    <PrimaryButton @click="showLogModal = true">
-                                        Log This Book
-                                    </PrimaryButton>
-                                    <OutlineButton @click="showAddToList = true">
-                                        Add to List
-                                    </OutlineButton>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Description -->
-                    <div v-if="bookDetails.description" class="card rounded-2xl shadow-sm p-8 mb-6">
-                        <h2 class="text-xl font-semibold mb-4">Description</h2>
-                        <p class="text-dark-200 leading-relaxed whitespace-pre-line">
-                            {{ bookDetails.description }}
-                        </p>
-                    </div>
-
-                    <!-- Public Reviews Section -->
-                    <div class="card rounded-2xl shadow-sm p-8 mb-6">
+                    <!-- Public Reviews Section - Enhanced and Prominent -->
+                    <div class="card mb-6">
                         <div class="flex items-center justify-between mb-6">
-                            <h2 class="text-xl font-semibold">Community Reviews</h2>
-                            <div class="text-sm text-dark-400">
-                                {{ publicReviews.length }} reviews
-                            </div>
+                            <h2 class="text-heading-2 flex items-center gap-3">
+                                <span class="text-3xl">💬</span>
+                                <span>Community Reviews</span>
+                                <span class="text-lg text-accent-red font-bold">{{ publicReviews.length }}</span>
+                            </h2>
+                            <button @click="showLogModal = true"
+                                class="px-6 py-3 bg-accent-red text-white rounded-lg hover:bg-accent-red/90 transition-colors font-medium shadow-lg">
+                                ✍️ Write Review
+                            </button>
                         </div>
 
                         <!-- Reviews Loading -->
-                        <div v-if="loadingReviews" class="text-center py-8">
-                            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-accent-red">
+                        <div v-if="loadingReviews" class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent-red">
                             </div>
-                            <p class="mt-2 text-sm text-dark-400">Loading reviews...</p>
+                            <p class="mt-3 text-dark-400">Loading reviews...</p>
                         </div>
 
                         <!-- Reviews List -->
                         <div v-else-if="publicReviews.length > 0" class="space-y-6">
                             <div v-for="review in publicReviews" :key="review.id"
-                                class="border-b border-dark-800 pb-6 last:border-b-0">
+                                class="bg-dark-800 rounded-xl p-6 border border-dark-700 hover:border-dark-600 transition-all duration-200 hover:shadow-lg">
                                 <div class="flex items-start gap-4">
                                     <img v-if="review.user.picture" :src="review.user.picture" :alt="review.user.name"
-                                        class="w-10 h-10 rounded-full object-cover" />
+                                        class="w-16 h-16 rounded-full object-cover border-2 border-dark-600" />
                                     <div v-else
-                                        class="w-10 h-10 bg-dark-800 rounded-full flex items-center justify-center text-dark-400">
+                                        class="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center text-dark-300 border-2 border-dark-600 font-bold text-xl">
                                         {{ review.user.name.charAt(0).toUpperCase() }}
                                     </div>
 
                                     <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <h4 class="font-medium">{{ review.user.name }}</h4>
+                                        <div class="flex items-center gap-3 mb-3">
+                                            <h4 class="font-bold text-xl text-white">{{ review.user.name }}</h4>
                                             <span class="text-sm text-dark-400">@{{ review.user.username }}</span>
                                             <span class="text-sm text-dark-400">•</span>
                                             <span class="text-sm text-dark-400">{{ formatDate(review.created_at)
-                                            }}</span>
+                                                }}</span>
                                         </div>
 
-                                        <!-- Rating -->
-                                        <div v-if="review.rating" class="flex items-center gap-1 mb-3">
-                                            <div class="flex">
-                                                <span v-for="i in 5" :key="i" class="text-sm"
-                                                    :class="i <= review.rating ? 'text-accent-orange' : 'text-dark-400'">
+                                        <!-- Rating & Status -->
+                                        <div class="flex items-center gap-3 mb-4">
+                                            <div v-if="review.rating" class="flex">
+                                                <span v-for="i in 5" :key="i" class="text-2xl"
+                                                    :class="i <= review.rating ? 'text-accent-orange' : 'text-dark-500'">
                                                     ★
                                                 </span>
                                             </div>
-                                            <span class="text-sm text-dark-300">{{ getStatusText(review.status)
-                                            }}</span>
+                                            <span
+                                                class="px-3 py-1 rounded-full text-xs font-semibold bg-accent-blue/20 text-accent-blue border border-accent-blue/30">
+                                                {{ getStatusText(review.status) }}
+                                            </span>
                                         </div>
 
                                         <!-- Review Content -->
-                                        <div v-if="review.review" class="text-dark-200 mb-2">
-                                            <p class="whitespace-pre-line">{{ review.review }}</p>
+                                        <div v-if="review.review" class="text-dark-100 mb-4">
+                                            <p class="whitespace-pre-line text-base leading-relaxed">{{ review.review }}
+                                            </p>
                                         </div>
 
                                         <!-- Notes -->
-                                        <div v-if="review.notes" class="text-sm text-dark-300">
+                                        <div v-if="review.notes"
+                                            class="text-sm text-dark-300 bg-dark-700 p-4 rounded-lg border border-dark-600">
                                             <p class="whitespace-pre-line">{{ review.notes }}</p>
                                         </div>
                                     </div>
@@ -185,29 +168,47 @@
                         </div>
 
                         <!-- No Reviews -->
-                        <div v-else class="text-center py-8 text-dark-400">
-                            <div class="text-4xl mb-2">📝</div>
-                            <p>No public reviews yet</p>
-                            <p class="text-sm">Be the first to share your thoughts!</p>
+                        <div v-else class="text-center py-20 text-dark-400">
+                            <div class="text-8xl mb-6">📝</div>
+                            <h3 class="text-2xl font-semibold mb-3 text-white">No reviews yet</h3>
+                            <p class="mb-8 text-lg">Be the first to share your thoughts about this book!</p>
+                            <button @click="showLogModal = true"
+                                class="px-8 py-4 bg-accent-red text-white rounded-lg hover:bg-accent-red/90 transition-colors font-medium text-lg shadow-lg">
+                                ✍️ Write the First Review
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Related Books -->
-                    <div v-if="relatedBooks.length > 0" class="card rounded-2xl shadow-sm p-8">
-                        <h2 class="text-xl font-semibold mb-6">Related Books</h2>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div v-for="book in relatedBooks" :key="book.id" @click="$router.push(`/books/${book.id}`)"
-                                class="cursor-pointer group">
-                                <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
-                                    class="w-full h-48 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-shadow" />
-                                <div v-else
-                                    class="w-full h-48 bg-dark-800 rounded-lg flex items-center justify-center text-2xl text-dark-400">
-                                    📚
+                    <!-- Lists containing this book - Now more prominent -->
+                    <div v-if="listsWithBook.length > 0" class="card">
+                        <h2 class="text-heading-2 mb-6 flex items-center gap-3">
+                            <span class="text-3xl">📋</span>
+                            <span>Featured in Lists</span>
+                            <span class="text-lg text-accent-blue font-bold">{{ listsWithBook.length }}</span>
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div v-for="list in listsWithBook" :key="list.id" @click="$router.push(`/lists/${list.id}`)"
+                                class="cursor-pointer p-4 bg-dark-800 rounded-xl hover:bg-dark-700 transition-all duration-200 border border-dark-700 hover:border-dark-600 hover:shadow-lg group">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex-shrink-0">
+                                        <div
+                                            class="w-12 h-12 bg-accent-blue/20 rounded-lg flex items-center justify-center text-accent-blue text-xl">
+                                            📚
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4
+                                            class="font-semibold text-white text-base mb-1 group-hover:text-accent-blue transition-colors">
+                                            {{ list.name }}</h4>
+                                        <p v-if="list.description" class="text-sm text-dark-400 line-clamp-2 mb-2">{{
+                                            list.description }}</p>
+                                        <div class="flex items-center gap-2 text-xs text-dark-500">
+                                            <span>by {{ list.creator.username }}</span>
+                                            <span>•</span>
+                                            <span>{{ list.items_count || 0 }} books</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <h3 class="mt-2 text-sm font-medium text-white line-clamp-2">{{ book.title }}</h3>
-                                <p v-if="book.authors?.length" class="text-xs text-dark-400 line-clamp-1">
-                                    {{ book.authors[0] }}
-                                </p>
                             </div>
                         </div>
                     </div>
@@ -215,55 +216,111 @@
 
                 <!-- Sidebar -->
                 <div class="lg:col-span-1">
-                    <!-- ISBN Info -->
-                    <div v-if="bookDetails.isbn_10 || bookDetails.isbn_13" class="card rounded-2xl shadow-sm p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">Book Details</h3>
-                        <div class="space-y-2 text-sm">
-                            <div v-if="bookDetails.isbn_10">
-                                <span class="font-medium text-dark-300">ISBN-10:</span>
-                                <span class="ml-2 font-mono">{{ bookDetails.isbn_10 }}</span>
-                            </div>
-                            <div v-if="bookDetails.isbn_13">
-                                <span class="font-medium text-dark-300">ISBN-13:</span>
-                                <span class="ml-2 font-mono">{{ bookDetails.isbn_13 }}</span>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Community Stats -->
-                    <div class="card rounded-2xl shadow-sm p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">Community Stats</h3>
+                    <div class="card mb-6">
+                        <h3 class="text-heading-4 mb-4 flex items-center gap-2">
+                            <span class="text-xl">📊</span>
+                            <span>Community Stats</span>
+                        </h3>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center">
-                                <span class="text-sm text-dark-300">Want to Read</span>
-                                <span class="font-semibold">{{ communityStats.want_to_read || 0 }}</span>
+                                <span class="text-dark-300 text-sm">Want to Read</span>
+                                <span class="font-bold text-accent-blue">{{ communityStats.want_to_read || 0 }}</span>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-sm text-dark-300">Currently Reading</span>
-                                <span class="font-semibold">{{ communityStats.reading || 0 }}</span>
+                                <span class="text-dark-300 text-sm">Currently Reading</span>
+                                <span class="font-bold text-accent-green">{{ communityStats.reading || 0 }}</span>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-sm text-dark-300">Have Read</span>
-                                <span class="font-semibold">{{ communityStats.read || 0 }}</span>
+                                <span class="text-dark-300 text-sm">Have Read</span>
+                                <span class="font-bold text-accent-purple">{{ communityStats.read || 0 }}</span>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-sm text-dark-300">Average Rating</span>
-                                <span class="font-semibold">{{ communityStats.avg_rating ?
+                                <span class="text-dark-300 text-sm">Average Rating</span>
+                                <span class="font-bold text-accent-orange">{{ communityStats.avg_rating ?
                                     communityStats.avg_rating.toFixed(1) : 'N/A' }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Lists containing this book -->
-                    <div v-if="listsWithBook.length > 0" class="card rounded-2xl shadow-sm p-6">
-                        <h3 class="text-lg font-semibold mb-4">Featured in Lists</h3>
+                    <!-- Book Details - Compact -->
+                    <div class="card mb-6">
+                        <h3 class="text-heading-4 mb-4 flex items-center gap-2">
+                            <span class="text-xl">ℹ️</span>
+                            <span>Book Details</span>
+                        </h3>
                         <div class="space-y-3">
-                            <div v-for="list in listsWithBook" :key="list.id" @click="$router.push(`/lists/${list.id}`)"
-                                class="cursor-pointer p-3 bg-dark-800 rounded-lg hover:bg-dark-800 transition-colors">
-                                <h4 class="font-medium text-sm">{{ list.name }}</h4>
-                                <p v-if="list.description" class="text-xs text-dark-400 line-clamp-1">{{
-                                    list.description }}</p>
-                                <p class="text-xs text-dark-400 mt-1">by {{ list.creator.username }}</p>
+                            <div v-if="bookDetails.published_date" class="flex justify-between">
+                                <span class="font-medium text-dark-300 text-sm">Published:</span>
+                                <span class="text-white text-sm">{{ bookDetails.published_date }}</span>
+                            </div>
+                            <div v-if="bookDetails.page_count" class="flex justify-between">
+                                <span class="font-medium text-dark-300 text-sm">Pages:</span>
+                                <span class="text-white text-sm">{{ bookDetails.page_count }}</span>
+                            </div>
+                            <div v-if="bookDetails.publisher" class="flex justify-between">
+                                <span class="font-medium text-dark-300 text-sm">Publisher:</span>
+                                <span class="text-white text-sm">{{ bookDetails.publisher }}</span>
+                            </div>
+                            <div v-if="bookDetails.language" class="flex justify-between">
+                                <span class="font-medium text-dark-300 text-sm">Language:</span>
+                                <span class="text-white text-sm">{{ bookDetails.language }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div v-if="bookDetails.description" class="mt-4 pt-4 border-t border-dark-700">
+                            <h4 class="font-medium text-white text-sm mb-2">Description</h4>
+                            <p class="text-dark-200 leading-relaxed whitespace-pre-line text-xs line-clamp-4">
+                                {{ bookDetails.description }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- ISBN Info -->
+                    <div v-if="bookDetails.isbn_10 || bookDetails.isbn_13" class="card mb-6">
+                        <h3 class="text-heading-4 mb-4 flex items-center gap-2">
+                            <span class="text-xl">📚</span>
+                            <span>ISBN</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div v-if="bookDetails.isbn_10" class="flex justify-between items-center">
+                                <span class="font-medium text-dark-300 text-sm">ISBN-10:</span>
+                                <span class="font-mono text-white text-sm">{{ bookDetails.isbn_10 }}</span>
+                            </div>
+                            <div v-if="bookDetails.isbn_13" class="flex justify-between items-center">
+                                <span class="font-medium text-dark-300 text-sm">ISBN-13:</span>
+                                <span class="font-mono text-white text-sm">{{ bookDetails.isbn_13 }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Related Books - Moved to sidebar -->
+                    <div v-if="relatedBooks.length > 0" class="card">
+                        <h3 class="text-heading-4 mb-4 flex items-center gap-2">
+                            <span class="text-xl">🔗</span>
+                            <span>Related Books</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div v-for="book in relatedBooks" :key="book.id" @click="$router.push(`/books/${book.id}`)"
+                                class="cursor-pointer group">
+                                <div class="flex gap-3">
+                                    <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
+                                        class="w-12 h-16 object-cover rounded shadow-md group-hover:shadow-lg transition-all duration-300" />
+                                    <div v-else
+                                        class="w-12 h-16 bg-dark-800 rounded flex items-center justify-center text-lg text-dark-400 shadow-md">
+                                        📚
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4
+                                            class="text-sm font-medium text-white line-clamp-2 group-hover:text-accent-blue transition-colors">
+                                            {{ book.title }}
+                                        </h4>
+                                        <p v-if="book.authors?.length" class="text-xs text-dark-400 line-clamp-1">
+                                            {{ book.authors[0] }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -284,7 +341,8 @@
                     <button @click="closeAddToListModal" class="text-dark-400 hover:text-dark-300 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"></path>
+                                d="M6 18L18 6M6 6l12 12">
+                            </path>
                         </svg>
                     </button>
                 </div>
@@ -345,11 +403,11 @@
                 </div>
             </div>
         </div>
-
-        <!-- List Creation Modal -->
-        <ListModal :show="showCreateListModal" :book="bookDetails" @close="showCreateListModal = false"
-            @success="handleListCreated" />
     </div>
+
+    <!-- List Creation Modal -->
+    <ListModal :show="showCreateListModal" :book="bookDetails" @close="showCreateListModal = false"
+        @success="handleListCreated" />
 </template>
 
 <script setup>
@@ -369,7 +427,7 @@ const router = useRouter()
 const toastStore = useToastStore()
 
 const bookDetails = ref(null)
-const loading = ref(false)
+const loading = ref(true)
 const error = ref(null)
 const showLogModal = ref(false)
 const showAddToList = ref(false)

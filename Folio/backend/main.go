@@ -171,6 +171,10 @@ func setupRoutes(e *echo.Echo, app *App) {
 	protected.PATCH("/annotations/:id", annotationHandler.UpdateAnnotation)
 	protected.DELETE("/annotations/:id", annotationHandler.DeleteAnnotation)
 	protected.GET("/annotations/search", annotationHandler.SearchAnnotations)
+	
+	// Theme and thread endpoints for the synthesizer
+	protected.GET("/users/me/themes", annotationHandler.GetUserThemes)
+	protected.GET("/annotations/thread", annotationHandler.GetAnnotationThread)
 }
 
 // healthCheck performs a database query and returns system status

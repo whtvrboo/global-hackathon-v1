@@ -32,7 +32,7 @@
                 ]">
                     Unsorted
                     <span v-if="unsortedAnnotations.length > 0" class="ml-1 text-xs">({{ unsortedAnnotations.length
-                    }})</span>
+                        }})</span>
                 </button>
             </div>
 
@@ -222,7 +222,7 @@ const fetchAnnotations = async () => {
 
         // Fetch book annotations
         const bookResponse = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/books/${props.bookId}/annotations`,
+            `/api/books/${props.bookId}/annotations`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -237,7 +237,7 @@ const fetchAnnotations = async () => {
 
         // Fetch unsorted annotations
         const unsortedResponse = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/annotations/unassociated`,
+            `/api/annotations/unassociated`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -264,7 +264,7 @@ const injectAnnotation = async (annotation) => {
         try {
             const token = localStorage.getItem('token')
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/annotations/${annotation.id}`,
+                `/api/annotations/${annotation.id}`,
                 {
                     method: 'PATCH',
                     headers: {

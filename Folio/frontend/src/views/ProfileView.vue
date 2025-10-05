@@ -1,367 +1,304 @@
 <template>
-  <div class="min-h-screen bg-dark-950">
-
-    <main class="container-mobile max-w-7xl mx-auto section-padding">
-      <!-- Loading -->
-      <div v-if="loading" class="text-center py-16">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-2 border-dark-600 border-t-accent-red">
-        </div>
-        <p class="mt-4 text-dark-300">Loading your profile...</p>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="!user && !loading" class="text-center py-16">
-        <div class="text-6xl mb-6">😞</div>
-        <h3 class="text-heading-2 mb-4">Profile not found</h3>
-        <p class="text-body text-dark-300 mb-8 max-w-md mx-auto">
-          <span v-if="authStore.isGuestUser && authStore.user?.username === route.params.username">
-            Your guest profile is being set up. Please try refreshing the page or logging in to access your full
-            profile.
-          </span>
-          <span v-else>
-            The user profile you're looking for doesn't exist or you don't have permission to view it.
-          </span>
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <button @click="$router.push('/')" class="btn-primary">
-            Go Home
-          </button>
-          <button @click="$router.push('/discover')" class="btn-secondary">
-            Discover Books
-          </button>
-          <button v-if="authStore.isGuestUser && authStore.user?.username === route.params.username"
-            @click="window.location.reload()" class="btn-secondary">
-            Refresh Page
-          </button>
-        </div>
-      </div>
-
-      <!-- Profile Content -->
-      <div v-else-if="user" class="space-y-8">
-        <!-- User Header -->
-        <div class="card card-hover">
-          <div class="flex flex-col md:flex-row items-start gap-6">
-            <div class="relative">
-              <img v-if="user.picture" :src="user.picture" :alt="user.name"
-                class="w-24 h-24 rounded-full border-2 border-dark-700" />
-              <div v-else
-                class="w-24 h-24 rounded-full bg-dark-800 border-2 border-dark-700 flex items-center justify-center text-2xl">
-                U
-              </div>
-              <div v-if="authStore.isGuestUser"
-                class="absolute -top-1 -right-1 w-6 h-6 bg-accent-orange rounded-full flex items-center justify-center">
-                <span class="text-white text-xs font-bold">G</span>
-              </div>
+  <div v-if="loading" class="text-center p-12">
+    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    <p class="mt-4 text-dark-300">Loading profile...</p>
+  </div>
+  <div v-else-if="error" class="text-center p-12">
+    <div class="text-4xl mb-4">😞</div>
+    <p class="text-dark-300">{{ error }}</p>
+  </div>
+  <div v-else-if="user" class="bg-dark-950 min-h-screen">
+    <!-- Profile Hero Section - Compact -->
+    <div
+      class="relative w-full h-[25vh] text-white flex items-center justify-center text-center p-4 bg-gradient-to-br from-accent-red via-accent-purple to-accent-blue">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent"></div>
+      <div class="relative z-10 max-w-4xl mx-auto">
+        <div class="flex flex-col md:flex-row items-center gap-4">
+          <!-- Profile Picture -->
+          <div class="relative flex-shrink-0">
+            <img v-if="user.picture" :src="user.picture" :alt="user.name"
+              class="w-20 h-20 rounded-full border-3 border-white/50 shadow-2xl" />
+            <div v-else
+              class="w-20 h-20 rounded-full bg-white/20 border-3 border-white/50 flex items-center justify-center text-2xl font-bold shadow-2xl">
+              {{ user.name.charAt(0).toUpperCase() }}
             </div>
+            <div v-if="authStore.isGuestUser"
+              class="absolute -top-1 -right-1 w-5 h-5 bg-accent-orange rounded-full flex items-center justify-center shadow-lg">
+              <span class="text-white text-xs font-bold">G</span>
+            </div>
+          </div>
 
-            <div class="flex-1">
-              <div class="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                <h1 class="text-heading-1">{{ user.name }}</h1>
-                <span v-if="authStore.isGuestUser"
-                  class="inline-flex items-center px-3 py-1 text-xs font-medium bg-accent-orange/20 text-accent-orange rounded-full border border-accent-orange/30">
-                  Guest Account
-                </span>
-              </div>
-              <p class="text-body text-dark-300 mb-4">@{{ user.username }}</p>
-              <p v-if="user.bio" class="text-body text-dark-200 mb-4">{{ user.bio }}</p>
+          <!-- User Info -->
+          <div class="text-center md:text-left flex-1">
+            <div class="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+              <h1 class="text-2xl md:text-3xl font-bold">{{ user.name }}</h1>
+              <span v-if="authStore.isGuestUser"
+                class="inline-flex items-center px-2 py-1 text-xs font-medium bg-accent-orange/30 text-white rounded-full border border-white/30 backdrop-blur-sm">
+                Guest Account
+              </span>
+            </div>
+            <p class="text-base text-white/90 mb-2">@{{ user.username }}</p>
+            <p v-if="user.bio" class="text-sm text-white/80 mb-3 max-w-2xl">{{ user.bio }}</p>
 
-              <!-- Edit Profile Button (Own Profile) -->
-              <button v-if="isOwnProfile" @click="showEditProfile = true" class="btn-secondary text-sm">
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-2 justify-center md:justify-start">
+              <button v-if="isOwnProfile" @click="showEditProfile = true"
+                class="px-4 py-2 bg-white/20 text-white rounded-lg border border-white/30 hover:bg-white/30 transition-all backdrop-blur-sm text-sm">
                 ✏️ Edit Profile
               </button>
-
-              <!-- Follow/Unfollow Button (Other's Profile) -->
               <button v-else-if="authStore.isAuthenticated" @click="toggleFollow" :disabled="followLoading"
-                class="btn-primary text-sm disabled:opacity-50"
-                :class="isFollowing ? 'bg-dark-700 hover:bg-dark-600' : ''">
+                class="px-4 py-2 rounded-lg border transition-all backdrop-blur-sm disabled:opacity-50 text-sm" :class="isFollowing
+                  ? 'bg-white/20 text-white border-white/30 hover:bg-white/30'
+                  : 'bg-white text-dark-950 border-white hover:bg-white/90'">
                 {{ followLoading ? 'Loading...' : (isFollowing ? '✓ Following' : '+ Follow') }}
               </button>
-            </div>
-          </div>
-
-          <!-- Social Stats -->
-          <div v-if="user.stats" class="grid grid-cols-2 md:grid-cols-3 gap-6 mt-8 pt-6 border-t border-dark-800">
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-blue">{{ user.stats.followers_count }}</div>
-              <div class="text-caption">Followers</div>
-            </div>
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-green">{{ user.stats.following_count }}</div>
-              <div class="text-caption">Following</div>
-            </div>
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-purple">{{ user.stats.public_lists }}</div>
-              <div class="text-caption">Public Lists</div>
-            </div>
-          </div>
-
-          <!-- Reading Stats Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 pt-6 border-t border-dark-800">
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-red">{{ stats.total }}</div>
-              <div class="text-caption">Total Books</div>
-            </div>
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-green">{{ stats.read }}</div>
-              <div class="text-caption">Books Read</div>
-            </div>
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-blue">{{ stats.reading }}</div>
-              <div class="text-caption">Currently Reading</div>
-            </div>
-            <div class="text-center">
-              <div class="text-3xl font-bold text-accent-purple">{{ stats.wantToRead }}</div>
-              <div class="text-caption">Want to Read</div>
-            </div>
-          </div>
-
-          <!-- Favorite Books Section -->
-          <div v-if="favoriteBooks.length > 0" class="mt-6 pt-6 border-t border-dark-800">
-            <h3 class="text-heading-3 mb-4 flex items-center gap-2">
-              <span></span>
-              <span>Favorite Books</span>
-            </h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div v-for="book in favoriteBooks" :key="book.id" class="group cursor-pointer"
-                @click="showBookDetail(book)">
-                <div class="aspect-[2/3] relative overflow-hidden bg-dark-800 rounded-xl mb-2">
-                  <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div v-else class="w-full h-full flex items-center justify-center text-2xl text-dark-400">
-                  </div>
-                </div>
-                <h4 class="text-sm font-medium text-white line-clamp-2 group-hover:text-accent-blue transition-colors">
-                  {{ book.title }}
-                </h4>
-                <p v-if="book.authors?.length" class="text-xs text-dark-400 line-clamp-1">
-                  by {{ book.authors.join(', ') }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Enhanced Stats with Visualizations -->
-          <div v-if="stats.total > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 pt-6 border-t border-dark-800">
-            <!-- Average Rating with Star Visualization -->
-            <div class="text-center">
-              <div class="flex items-center justify-center gap-2 mb-2">
-                <div class="text-2xl font-bold text-accent-orange">{{ stats.averageRating.toFixed(1) }}</div>
-                <div class="flex">
-                  <span v-for="star in 5" :key="star"
-                    :class="star <= Math.round(stats.averageRating) ? 'text-accent-orange' : 'text-dark-600'"
-                    class="text-lg">★</span>
-                </div>
-              </div>
-              <div class="text-caption">Average Rating</div>
-              <div class="w-full bg-dark-700 rounded-full h-2 mt-2">
-                <div
-                  class="bg-gradient-to-r from-accent-orange to-accent-red h-2 rounded-full transition-all duration-500"
-                  :style="{ width: `${(stats.averageRating / 5) * 100}%` }"></div>
-              </div>
-            </div>
-
-            <!-- Pages Read with Progress Circle -->
-            <div class="text-center">
-              <div class="relative inline-flex items-center justify-center w-16 h-16 mb-2">
-                <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
-                    stroke="#374151" stroke-width="2" />
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
-                    stroke="#06b6d4" stroke-width="2" stroke-dasharray="100, 100"
-                    :stroke-dashoffset="100 - (Math.min(stats.totalPages / 10000, 1) * 100)" />
-                </svg>
-                <div class="absolute text-sm font-bold text-accent-cyan">{{ Math.floor(stats.totalPages / 1000) }}k
-                </div>
-              </div>
-              <div class="text-2xl font-bold text-accent-cyan">{{ stats.totalPages.toLocaleString() }}</div>
-              <div class="text-caption">Pages Read</div>
-            </div>
-
-            <!-- This Year Reading with Trend -->
-            <div class="text-center">
-              <div class="text-2xl font-bold text-accent-pink mb-2">{{ stats.thisYear }}</div>
-              <div class="text-caption mb-2">Read This Year</div>
-              <div class="flex justify-center items-end gap-1 h-8">
-                <div v-for="month in 12" :key="month" class="bg-accent-pink rounded-sm transition-all duration-500"
-                  :style="{
-                    height: `${Math.random() * 100}%`,
-                    width: '4px'
-                  }"></div>
-              </div>
-              <div class="text-xs text-dark-400 mt-1">Monthly Progress</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filter Tabs -->
-        <div class="flex gap-2 overflow-x-auto scrollbar-hide">
-          <button v-for="tab in tabs" :key="tab.value" @click="currentTab = tab.value" :class="[
-            'px-6 py-3 font-medium rounded-xl transition-all duration-200 whitespace-nowrap',
-            currentTab === tab.value
-              ? 'bg-accent-red text-white shadow-lg'
-              : 'bg-dark-800 text-dark-300 hover:bg-dark-700 hover:text-white'
-          ]">
-            {{ tab.label }}
-          </button>
-        </div>
-
-        <!-- Lists Tab Content -->
-        <div v-if="currentTab === 'lists'">
-          <ListManager />
-        </div>
-
-        <!-- Books Tab Content -->
-        <div v-else>
-          <!-- View Toggle -->
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2">
-              <button @click="viewMode = 'grid'" :class="[
-                'p-2 rounded-lg transition-colors',
-                viewMode === 'grid' ? 'bg-accent-red text-white' : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
-              ]">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
-                  </path>
-                </svg>
-              </button>
-              <button @click="viewMode = 'timeline'" :class="[
-                'p-2 rounded-lg transition-colors',
-                viewMode === 'timeline' ? 'bg-accent-red text-white' : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
-              ]">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+              <button v-if="isOwnProfile" @click="showInviteModal = true"
+                class="px-4 py-2 bg-accent-blue/20 text-white rounded-lg border border-accent-blue/30 hover:bg-accent-blue/30 transition-all backdrop-blur-sm text-sm">
+                👥 Invite Friends
               </button>
             </div>
-            <div class="text-sm text-dark-400">
-              {{ filteredLogs.length }} book{{ filteredLogs.length !== 1 ? 's' : '' }}
-            </div>
           </div>
+        </div>
+      </div>
+    </div>
 
-          <!-- Grid View -->
-          <div v-if="viewMode === 'grid' && filteredLogs.length > 0"
-            class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <BookCard v-for="log in filteredLogs" :key="log.id" :book="{
-              ...log.book,
-              id: log.book_id,
-              status: log.status,
-              rating: log.rating
-            }" @click="selectedBook = log" />
+    <!-- Profile Content - Compact -->
+    <div class="container mx-auto max-w-7xl py-4 px-4">
+      <!-- Stats Overview - Compact -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <!-- Social Stats -->
+        <div v-if="user.stats" class="card p-4">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-accent-blue mb-1">{{ user.stats.followers_count }}</div>
+            <div class="text-caption text-xs">Followers</div>
           </div>
+        </div>
+        <div v-if="user.stats" class="card p-4">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-accent-green mb-1">{{ user.stats.following_count }}</div>
+            <div class="text-caption text-xs">Following</div>
+          </div>
+        </div>
+        <div v-if="user.stats" class="card p-4">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-accent-purple mb-1">{{ user.stats.public_lists }}</div>
+            <div class="text-caption text-xs">Lists</div>
+          </div>
+        </div>
+        <div class="card p-4">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-accent-red mb-1">{{ stats.total }}</div>
+            <div class="text-caption text-xs">Books</div>
+          </div>
+        </div>
+      </div>
 
-          <!-- Timeline View -->
-          <div v-else-if="viewMode === 'timeline' && filteredLogs.length > 0" class="space-y-6">
-            <div v-for="group in chronologicalLogs" :key="group.period" class="card">
-              <h3 class="text-heading-4 text-white mb-4">{{ group.period }}</h3>
-              <div class="space-y-4">
-                <div v-for="log in group.logs" :key="log.id" @click="selectedBook = log"
-                  class="flex gap-4 p-4 bg-dark-800 rounded-xl hover:bg-dark-700 transition-colors cursor-pointer">
-                  <img v-if="log.book.cover_url" :src="log.book.cover_url" :alt="log.book.title"
-                    class="w-16 h-24 object-cover rounded-lg" />
-                  <div v-else class="w-16 h-24 bg-dark-700 rounded-lg flex items-center justify-center">
-                    <span class="text-2xl text-dark-400"></span>
-                  </div>
-                  <div class="flex-1">
-                    <h4 class="text-heading-4 text-white mb-1">{{ log.book.title }}</h4>
-                    <p v-if="log.book.authors" class="text-body text-dark-300 mb-2">
-                      by {{ log.book.authors.join(', ') }}
-                    </p>
-                    <div class="flex items-center gap-4 text-sm">
-                      <span class="px-2 py-1 rounded-full text-xs font-semibold" :class="statusBadgeClass(log.status)">
-                        {{ statusLabel(log.status) }}
-                      </span>
-                      <span v-if="log.rating" class="text-accent-orange">
-                        {{ '★'.repeat(log.rating) }}{{ '☆'.repeat(5 - log.rating) }}
-                      </span>
-                      <span class="text-dark-400">{{ formatDate(log.created_at) }}</span>
+      <!-- Quick Analytics - Compact -->
+      <div v-if="stats.total > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="card p-4">
+          <div class="text-center">
+            <div class="text-xl font-bold text-accent-orange mb-1">{{ stats.averageRating.toFixed(1) }}</div>
+            <div class="text-caption text-xs">Avg Rating</div>
+          </div>
+        </div>
+        <div class="card p-4">
+          <div class="text-center">
+            <div class="text-xl font-bold text-accent-cyan mb-1">{{ Math.floor(stats.totalPages / 1000) }}k</div>
+            <div class="text-caption text-xs">Pages</div>
+          </div>
+        </div>
+        <div class="card p-4">
+          <div class="text-center">
+            <div class="text-xl font-bold text-accent-pink mb-1">{{ stats.thisYear }}</div>
+            <div class="text-caption text-xs">This Year</div>
+          </div>
+        </div>
+        <div class="card p-4">
+          <div class="text-center">
+            <div class="text-xl font-bold text-accent-green mb-1">{{ stats.read }}</div>
+            <div class="text-caption text-xs">Completed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs - Compact -->
+    <div class="container mx-auto max-w-7xl px-4">
+      <div class="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
+        <button v-for="tab in tabs" :key="tab.value" @click="currentTab = tab.value" :class="[
+          'px-4 py-2 font-medium rounded-lg transition-all duration-200 whitespace-nowrap text-sm',
+          currentTab === tab.value
+            ? 'bg-accent-red text-white shadow-lg'
+            : 'bg-dark-800 text-dark-300 hover:bg-dark-700 hover:text-white'
+        ]">
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Lists Tab Content -->
+    <div v-if="currentTab === 'lists'">
+      <ListManager />
+    </div>
+
+    <!-- Books Tab Content -->
+    <div v-else class="container mx-auto max-w-7xl px-4">
+      <!-- View Toggle - Compact -->
+      <div class="card p-4 mb-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <button @click="viewMode = 'grid'" :class="[
+              'p-2 rounded-lg transition-all duration-200',
+              viewMode === 'grid' ? 'bg-accent-red text-white shadow-lg' : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+            ]">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                </path>
+              </svg>
+            </button>
+            <button @click="viewMode = 'timeline'" :class="[
+              'p-2 rounded-lg transition-all duration-200',
+              viewMode === 'timeline' ? 'bg-accent-red text-white shadow-lg' : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+            ]">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="text-sm text-dark-400 font-medium">
+            {{ filteredLogs.length }} book{{ filteredLogs.length !== 1 ? 's' : '' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid View -->
+      <div v-if="viewMode === 'grid' && filteredLogs.length > 0"
+        class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <BookCard v-for="log in filteredLogs" :key="log.id" :book="{
+          ...log.book,
+          id: log.book_id,
+          status: log.status,
+          rating: log.rating
+        }" @click="selectedBook = log" />
+      </div>
+
+      <!-- Timeline View - Compact -->
+      <div v-else-if="viewMode === 'timeline' && filteredLogs.length > 0" class="space-y-4">
+        <div v-for="group in chronologicalLogs" :key="group.period" class="card p-4">
+          <h3 class="text-heading-5 text-white mb-3 flex items-center gap-2">
+            <span class="text-lg">📅</span>
+            <span>{{ group.period }}</span>
+          </h3>
+          <div class="space-y-3">
+            <div v-for="log in group.logs" :key="log.id" @click="selectedBook = log"
+              class="bg-dark-800 rounded-lg p-3 hover:bg-dark-700 transition-all duration-200 cursor-pointer border border-dark-700 hover:border-dark-600">
+              <div class="flex gap-3">
+                <img v-if="log.book.cover_url" :src="log.book.cover_url" :alt="log.book.title"
+                  class="w-12 h-16 object-cover rounded shadow-md flex-shrink-0" />
+                <div v-else
+                  class="w-12 h-16 bg-dark-700 rounded flex items-center justify-center shadow-md flex-shrink-0">
+                  <span class="text-lg text-dark-400">📚</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-start justify-between mb-1">
+                    <div>
+                      <h4 class="text-sm font-medium text-white mb-1 line-clamp-1">{{ log.book.title }}</h4>
+                      <p v-if="log.book.authors" class="text-xs text-dark-300 mb-1 line-clamp-1">
+                        by {{ log.book.authors.join(', ') }}
+                      </p>
                     </div>
-                    <p v-if="log.review" class="text-sm text-dark-300 mt-2 line-clamp-2">
-                      {{ log.review }}
-                    </p>
+                    <span class="text-xs text-dark-400">{{ formatDate(log.created_at) }}</span>
+                  </div>
+
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-semibold" :class="statusBadgeClass(log.status)">
+                      {{ statusLabel(log.status) }}
+                    </span>
+                    <div v-if="log.rating" class="flex items-center gap-1">
+                      <span class="text-accent-orange text-xs">{{ '★'.repeat(log.rating) }}{{ '☆'.repeat(5 - log.rating)
+                      }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Review Content - Compact -->
+                  <div v-if="log.review" class="bg-dark-700 rounded p-2 mb-1">
+                    <p class="text-xs text-dark-100 leading-relaxed line-clamp-2">{{ log.review }}</p>
+                  </div>
+
+                  <!-- Notes -->
+                  <div v-if="log.notes" class="text-xs text-dark-300 bg-dark-700/50 rounded p-2">
+                    <p class="whitespace-pre-line line-clamp-1">{{ log.notes }}</p>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else class="card text-center py-16">
-            <div class="text-6xl mb-6"></div>
-            <h3 class="text-heading-2 mb-4">No books yet</h3>
-            <p class="text-body text-dark-300 mb-8 max-w-md mx-auto">
-              Start building your reading journal by discovering and logging your first book
-            </p>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-              <button @click="$router.push('/discover')" class="btn-primary">
-                Discover Books
-              </button>
-              <button @click="$router.push('/')" class="btn-secondary">
-                Go Home
-              </button>
             </div>
           </div>
         </div>
       </div>
-    </main>
 
-    <!-- Book Detail Modal (for viewing logged books) -->
-    <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0"
-      leave-active-class="transition ease-in duration-150" leave-to-class="opacity-0">
-      <div v-if="selectedBook" @click="selectedBook = null"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-        <Card @click.stop class="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
-          <button @click="selectedBook = null" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600">
-            ✕
+      <!-- Empty State - Compact -->
+      <div v-else class="card text-center py-12">
+        <div class="text-6xl mb-6">📚</div>
+        <h3 class="text-heading-3 mb-3">No books yet</h3>
+        <p class="text-body text-dark-300 mb-6 max-w-md mx-auto">
+          Start building your reading journal by discovering and logging your first book
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <button @click="$router.push('/discover')" class="btn-primary px-6 py-2">
+            Discover Books
           </button>
-
-          <div class="flex gap-6">
-            <img v-if="selectedBook.book?.cover_url" :src="selectedBook.book.cover_url" :alt="selectedBook.book.title"
-              class="w-32 h-48 object-cover rounded-lg" />
-            <div class="flex-1">
-              <h2 class="text-2xl font-bold mb-2">{{ selectedBook.book?.title }}</h2>
-              <p v-if="selectedBook.book?.authors" class="text-gray-600 mb-4">
-                {{ selectedBook.book.authors.join(', ') }}
-              </p>
-
-              <div class="space-y-3">
-                <div>
-                  <span class="text-sm font-medium text-gray-500">Status:</span>
-                  <span class="ml-2">{{ statusLabel(selectedBook.status) }}</span>
-                </div>
-
-                <div v-if="selectedBook.rating">
-                  <span class="text-sm font-medium text-gray-500">Rating:</span>
-                  <span class="ml-2 text-yellow-500">
-                    {{ '★'.repeat(selectedBook.rating) }}
-                  </span>
-                </div>
-
-                <div v-if="selectedBook.review" class="pt-4 border-t">
-                  <p class="text-sm font-medium text-gray-500 mb-2">Review:</p>
-                  <p class="text-gray-700">{{ selectedBook.review }}</p>
-                </div>
-
-                <div v-if="selectedBook.start_date || selectedBook.finish_date" class="pt-4 border-t">
-                  <div v-if="selectedBook.start_date" class="text-sm text-gray-600">
-                    Started: {{ new Date(selectedBook.start_date).toLocaleDateString() }}
-                  </div>
-                  <div v-if="selectedBook.finish_date" class="text-sm text-gray-600">
-                    Finished: {{ new Date(selectedBook.finish_date).toLocaleDateString() }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
+          <button @click="$router.push('/')" class="btn-secondary px-6 py-2">
+            Go Home
+          </button>
+        </div>
       </div>
-    </transition>
+    </div>
+  </div>
 
+  <!-- Invite Friends Modal -->
+  <div v-if="showInviteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-dark-900 rounded-xl p-6 w-full max-w-md">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-heading-4 text-white">Invite Friends</h3>
+        <button @click="showInviteModal = false" class="text-dark-400 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
 
-    <!-- Profile Edit Modal -->
-    <ProfileEditModal :show="showEditProfile" :current-user="user" :user-logs="logs" @close="showEditProfile = false"
-      @updated="refreshProfile" />
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white mb-2">Share your profile</label>
+          <div class="flex gap-2">
+            <input :value="profileUrl" readonly
+              class="flex-1 bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm text-white" />
+            <button @click="copyProfileUrl"
+              class="px-4 py-2 bg-accent-blue text-white rounded-lg hover:bg-accent-blue/80 transition-colors text-sm">
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-white mb-2">Or invite via email</label>
+          <div class="flex gap-2">
+            <input v-model="inviteEmail" type="email" placeholder="friend@example.com"
+              class="flex-1 bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm text-white placeholder-dark-400" />
+            <button @click="sendInvite" :disabled="!inviteEmail || inviteLoading"
+              class="px-4 py-2 bg-accent-green text-white rounded-lg hover:bg-accent-green/80 transition-colors text-sm disabled:opacity-50">
+              {{ inviteLoading ? 'Sending...' : 'Send' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="text-xs text-dark-400">
+          Share your reading journey with friends and discover new books together!
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -386,12 +323,16 @@ const user = ref(null)
 const logs = ref([])
 const favoriteBooks = ref([])
 const loading = ref(true)
+const error = ref(null)
 const currentTab = ref('lists')
 const selectedBook = ref(null)
 const viewMode = ref('grid')
 const showEditProfile = ref(false)
+const showInviteModal = ref(false)
 const isFollowing = ref(false)
 const followLoading = ref(false)
+const inviteEmail = ref('')
+const inviteLoading = ref(false)
 
 const isOwnProfile = computed(() => {
   // Check if the current user (authenticated or guest) is viewing their own profile
@@ -501,38 +442,18 @@ const getTimePeriod = (date) => {
   return 'Older'
 }
 
-onMounted(async () => {
+const fetchProfile = async () => {
+  loading.value = true
+  error.value = null
   try {
     const username = route.params.username
-    console.log('Loading profile for username:', username)
-    console.log('Current auth user:', authStore.user)
-    console.log('Is authenticated:', authStore.isAuthenticated)
-    console.log('Is guest user:', authStore.isGuestUser)
-
-    // Ensure auth store is initialized for guest users
-    if (authStore.isAuthenticated && !authStore.user) {
-      console.log('Fetching user data...')
-      await authStore.fetchUser()
-    }
-
-    // Check if this is the current user's own profile
-    const isOwnProfile = authStore.user && authStore.user.username === username
-    console.log('Is own profile:', isOwnProfile)
-
-    // Fetch user profile
-    console.log('Fetching profile from API...')
     const profileResponse = await axios.get(`/api/users/${username}`)
-    console.log('Profile response:', profileResponse.data)
     user.value = profileResponse.data
     isFollowing.value = profileResponse.data.is_following
 
-    // Fetch user's logs
-    console.log('Fetching user logs...')
     const logsResponse = await axios.get(`/api/users/${username}/logs`)
-    console.log('Logs response:', logsResponse.data)
     logs.value = logsResponse.data.logs || []
 
-    // Load favorite books (for now, get highest rated books)
     if (logs.value.length > 0) {
       const readLogs = logs.value.filter(l => l.status === 'read' && l.rating >= 4)
       favoriteBooks.value = readLogs
@@ -540,50 +461,18 @@ onMounted(async () => {
         .slice(0, 4)
         .map(log => log.book)
     } else {
-      // Initialize empty arrays for new guest users
       favoriteBooks.value = []
     }
-  } catch (error) {
-    console.error('Error loading profile:', error)
-    console.error('Error response:', error.response?.data)
-    console.error('Error status:', error.response?.status)
-
-    // If it's a 404 and this is the current user's own profile, 
-    // try to redirect to their actual profile or show a different message
-    if (error.response?.status === 404 && authStore.user && authStore.user.username === route.params.username) {
-      console.log('Profile not found for own username, this might be a guest user issue')
-      // For guest users, we might need to handle this differently
-      if (authStore.isGuestUser) {
-        console.log('This is a guest user, showing guest-specific message')
-        // Try to use the guest user data directly if available
-        if (authStore.user) {
-          console.log('Using guest user data directly')
-          user.value = {
-            ...authStore.user,
-            is_guest: true,
-            stats: {
-              followers_count: 0,
-              following_count: 0,
-              public_lists: 0,
-              total_books: 0,
-              read_books: 0,
-              reading_books: 0,
-              want_to_read_books: 0
-            }
-          }
-          isFollowing.value = false
-          logs.value = []
-          favoriteBooks.value = []
-          return // Skip the rest of the error handling
-        }
-      }
-    }
-
-    // Show error state instead of blank screen
-    user.value = null
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Failed to load profile'
+    console.error('Error loading profile:', err)
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchProfile()
 })
 
 const toggleFollow = async () => {
@@ -629,6 +518,43 @@ const refreshProfile = async () => {
     }
   } catch (error) {
     console.error('Error refreshing profile:', error)
+  }
+}
+
+const profileUrl = computed(() => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/profile/${user.value?.username}`
+  }
+  return ''
+})
+
+const copyProfileUrl = async () => {
+  try {
+    await navigator.clipboard.writeText(profileUrl.value)
+    toastStore.success('Profile URL copied to clipboard!')
+  } catch (error) {
+    console.error('Failed to copy URL:', error)
+    toastStore.error('Failed to copy URL')
+  }
+}
+
+const sendInvite = async () => {
+  if (!inviteEmail.value) return
+
+  inviteLoading.value = true
+  try {
+    await axios.post('/api/invites', {
+      email: inviteEmail.value,
+      message: `Join me on Folio! Check out my reading profile: ${profileUrl.value}`
+    })
+    toastStore.success(`Invite sent to ${inviteEmail.value}!`)
+    inviteEmail.value = ''
+    showInviteModal.value = false
+  } catch (error) {
+    console.error('Error sending invite:', error)
+    toastStore.error('Failed to send invite')
+  } finally {
+    inviteLoading.value = false
   }
 }
 </script>

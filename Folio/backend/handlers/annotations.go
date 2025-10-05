@@ -613,3 +613,154 @@ func (h *AnnotationHandler) SearchAnnotations(c echo.Context) error {
 		"query":   searchQuery,
 	})
 }
+
+// GetUserThemes returns the user's most frequently used tags
+func (h *AnnotationHandler) GetUserThemes(c echo.Context) error {
+	userID := auth.GetUserID(c)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT tag, usage_count, last_used_at
+		FROM user_tags
+		WHERE user_id = $1
+		ORDER BY usage_count DESC, last_used_at DESC
+		LIMIT 20
+	`
+
+	rows, err := h.DB.Query(ctx, query, userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch user themes",
+		})
+	}
+	defer rows.Close()
+
+	themes := []map[string]interface{}{}
+	for rows.Next() {
+		var theme struct {
+			Tag        string
+			UsageCount int
+			LastUsedAt time.Time
+		}
+
+		err := rows.Scan(&theme.Tag, &theme.UsageCount, &theme.LastUsedAt)
+		if err != nil {
+			continue
+		}
+
+		themes = append(themes, map[string]interface{}{
+			"tag":         theme.Tag,
+			"usage_count": theme.UsageCount,
+			"last_used_at": theme.LastUsedAt,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"themes": themes,
+		"count":  len(themes),
+	})
+}
+
+// GetAnnotationThread returns all annotations for a specific tag in chronological order
+func (h *AnnotationHandler) GetAnnotationThread(c echo.Context) error {
+	userID := auth.GetUserID(c)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	tag := c.QueryParam("tag")
+	if tag == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "tag parameter is required",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT a.id, a.type, a.content, a.context, a.page_number, a.tags, 
+		       a.created_at, a.updated_at,
+		       b.id as book_id, b.title as book_title, b.authors as book_authors, 
+		       b.cover_url as book_cover
+		FROM annotations a
+		LEFT JOIN books b ON a.book_id = b.id
+		WHERE a.user_id = $1 AND $2 = ANY(a.tags)
+		ORDER BY a.created_at ASC
+	`
+
+	rows, err := h.DB.Query(ctx, query, userID, tag)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch annotation thread",
+		})
+	}
+	defer rows.Close()
+
+	annotations := []map[string]interface{}{}
+	for rows.Next() {
+		var annotation struct {
+			ID         string
+			Type       string
+			Content    string
+			Context    *string
+			PageNumber *int
+			Tags       []string
+			CreatedAt  time.Time
+			UpdatedAt  time.Time
+			BookID     *string
+			BookTitle  *string
+			BookAuthors []string
+			BookCover  *string
+		}
+
+		err := rows.Scan(
+			&annotation.ID, &annotation.Type, &annotation.Content,
+			&annotation.Context, &annotation.PageNumber, &annotation.Tags,
+			&annotation.CreatedAt, &annotation.UpdatedAt,
+			&annotation.BookID, &annotation.BookTitle, &annotation.BookAuthors,
+			&annotation.BookCover,
+		)
+		if err != nil {
+			continue
+		}
+
+		result := map[string]interface{}{
+			"id":          annotation.ID,
+			"type":        annotation.Type,
+			"content":     annotation.Content,
+			"context":     annotation.Context,
+			"page_number": annotation.PageNumber,
+			"tags":        annotation.Tags,
+			"created_at":  annotation.CreatedAt,
+			"updated_at":  annotation.UpdatedAt,
+		}
+
+		// Include book information if available
+		if annotation.BookID != nil {
+			result["book"] = map[string]interface{}{
+				"id":        *annotation.BookID,
+				"title":     annotation.BookTitle,
+				"authors":   annotation.BookAuthors,
+				"cover_url": annotation.BookCover,
+			}
+		}
+
+		annotations = append(annotations, result)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"annotations": annotations,
+		"count":       len(annotations),
+		"tag":         tag,
+	})
+}

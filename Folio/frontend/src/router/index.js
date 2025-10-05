@@ -3,10 +3,11 @@ import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import AuthCallback from '../views/AuthCallback.vue'
 import ProfileView from '../views/ProfileView.vue'
-import FeedView from '../views/FeedView.vue'
 import ListDetailView from '../views/ListDetailView.vue'
 import BookDetailView from '../views/BookDetailView.vue'
 import NotebookView from '../views/NotebookView.vue'
+import ThreadView from '../views/ThreadView.vue'
+import ListCreateView from '../views/ListCreateView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -26,12 +27,11 @@ const router = createRouter({
     },
     {
       path: '/feed',
-      name: 'feed',
-      component: FeedView
+      redirect: '/'
     },
     {
       path: '/discover',
-      redirect: '/feed'
+      redirect: '/'
     },
     {
       path: '/lists/:id',
@@ -49,6 +49,16 @@ const router = createRouter({
       path: '/notebook',
       name: 'notebook',
       component: NotebookView
+    },
+    {
+      path: '/notebook/threads/:tag',
+      name: 'thread',
+      component: ThreadView
+    },
+    {
+      path: '/lists/create',
+      name: 'list-create',
+      component: ListCreateView
     },
     {
       path: '/login',
