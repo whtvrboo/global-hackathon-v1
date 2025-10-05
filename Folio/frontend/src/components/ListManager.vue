@@ -198,8 +198,19 @@
                                         Add Note
                                     </button>
                                 </div>
-                                <div v-else>
-                                    <TextArea v-model="editingNotes" class="w-full" :rows="3" />
+                                <div v-else class="relative">
+                                    <div class="flex items-start gap-2">
+                                        <TextArea v-model="editingNotes" class="flex-1" :rows="3"
+                                            placeholder="Add your curator's note..." />
+                                        <button @click="openAnnotationBrowser(item)"
+                                            class="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                            title="Browse annotations">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                     <div class="flex gap-2 mt-2">
                                         <PrimaryButton @click="saveNotes(item.id)" size="sm">Save</PrimaryButton>
                                         <SecondaryButton @click="cancelEditingNotes" size="sm">Cancel</SecondaryButton>
@@ -234,6 +245,10 @@
         <!-- Create/Edit List Modal -->
         <ListModal :show="showCreateModal || showEditModal" :list="editingList" @close="closeModals"
             @success="handleListSuccess" />
+
+        <!-- Annotation Browser Sidecar -->
+        <AnnotationBrowser :is-open="showAnnotationBrowser" :book-id="currentEditingBookId"
+            @close="closeAnnotationBrowser" @inject="injectAnnotation" />
     </div>
 </template>
 
@@ -243,6 +258,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import draggable from 'vuedraggable'
 import ListModal from './ListModal.vue'
+import AnnotationBrowser from './AnnotationBrowser.vue'
 import { useToastStore } from '../stores/toast'
 import PrimaryButton from './ui/PrimaryButton.vue'
 import SecondaryButton from './ui/SecondaryButton.vue'
@@ -258,6 +274,8 @@ const editingList = ref(null)
 const toastStore = useToastStore()
 const editingItemId = ref(null)
 const editingNotes = ref('')
+const showAnnotationBrowser = ref(false)
+const currentEditingBookId = ref(null)
 
 const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -311,11 +329,32 @@ const deleteList = async (list) => {
 const startEditingNotes = (item) => {
     editingItemId.value = item.id
     editingNotes.value = item.notes || ''
+    currentEditingBookId.value = item.book.id
 }
 
 const cancelEditingNotes = () => {
     editingItemId.value = null
     editingNotes.value = ''
+    currentEditingBookId.value = null
+    showAnnotationBrowser.value = false
+}
+
+const openAnnotationBrowser = (item) => {
+    currentEditingBookId.value = item.book.id
+    showAnnotationBrowser.value = true
+}
+
+const closeAnnotationBrowser = () => {
+    showAnnotationBrowser.value = false
+}
+
+const injectAnnotation = (content) => {
+    // Append the annotation content to the current notes
+    if (editingNotes.value.trim()) {
+        editingNotes.value += '\n\n' + content
+    } else {
+        editingNotes.value = content
+    }
 }
 
 const saveNotes = async (itemId) => {

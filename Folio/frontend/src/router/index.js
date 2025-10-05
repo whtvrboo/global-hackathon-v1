@@ -4,9 +4,9 @@ import LoginView from '../views/LoginView.vue'
 import AuthCallback from '../views/AuthCallback.vue'
 import ProfileView from '../views/ProfileView.vue'
 import FeedView from '../views/FeedView.vue'
-import DiscoverView from '../views/DiscoverView.vue'
 import ListDetailView from '../views/ListDetailView.vue'
 import BookDetailView from '../views/BookDetailView.vue'
+import NotebookView from '../views/NotebookView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -31,9 +31,7 @@ const router = createRouter({
     },
     {
       path: '/discover',
-      name: 'discover',
-      component: DiscoverView,
-      meta: { public: true }
+      redirect: '/feed'
     },
     {
       path: '/lists/:id',
@@ -46,6 +44,11 @@ const router = createRouter({
       name: 'book-detail',
       component: BookDetailView,
       meta: { public: true }
+    },
+    {
+      path: '/notebook',
+      name: 'notebook',
+      component: NotebookView
     },
     {
       path: '/login',

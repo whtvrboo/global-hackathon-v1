@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"folio/api/auth"
 	"net/http"
 	"time"
@@ -420,7 +421,7 @@ func (h *AnnotationHandler) UpdateAnnotation(c echo.Context) error {
 	argCount := 1
 
 	if req.BookID != nil {
-		updates = append(updates, "book_id = $"+string(rune('0'+argCount)))
+		updates = append(updates, fmt.Sprintf("book_id = $%d", argCount))
 		args = append(args, *req.BookID)
 		argCount++
 		
@@ -429,19 +430,19 @@ func (h *AnnotationHandler) UpdateAnnotation(c echo.Context) error {
 	}
 
 	if req.Content != nil {
-		updates = append(updates, "content = $"+string(rune('0'+argCount)))
+		updates = append(updates, fmt.Sprintf("content = $%d", argCount))
 		args = append(args, *req.Content)
 		argCount++
 	}
 
 	if req.PageNumber != nil {
-		updates = append(updates, "page_number = $"+string(rune('0'+argCount)))
+		updates = append(updates, fmt.Sprintf("page_number = $%d", argCount))
 		args = append(args, *req.PageNumber)
 		argCount++
 	}
 
 	if req.Tags != nil {
-		updates = append(updates, "tags = $"+string(rune('0'+argCount)))
+		updates = append(updates, fmt.Sprintf("tags = $%d", argCount))
 		args = append(args, req.Tags)
 		argCount++
 	}
@@ -459,7 +460,7 @@ func (h *AnnotationHandler) UpdateAnnotation(c echo.Context) error {
 	for i := 1; i < len(updates); i++ {
 		query += ", " + updates[i]
 	}
-	query += " WHERE id = $" + string(rune('0'+argCount)) + " RETURNING updated_at"
+	query += fmt.Sprintf(" WHERE id = $%d RETURNING updated_at", argCount)
 
 	var updatedAt time.Time
 	err = h.DB.QueryRow(ctx, query, args...).Scan(&updatedAt)

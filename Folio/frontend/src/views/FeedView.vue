@@ -1,10 +1,16 @@
 <template>
     <div class="min-h-screen bg-dark-950">
 
-        <main class="container-mobile max-w-4xl mx-auto section-padding">
-            <div class="mb-8">
-                <h1 class="text-heading-1 mb-2">Your Reading Feed</h1>
-                <p class="text-body text-dark-300">See when your friends create and update their book lists</p>
+        <main class="container-mobile max-w-7xl mx-auto section-padding">
+            <div class="text-center mb-8">
+                <h1 class="text-heading-1 mb-2 flex items-center justify-center gap-3">
+                    <span>{{ authStore.isAuthenticated ? 'Your Reading Feed' : 'Discover Curated Lists' }}</span>
+                </h1>
+                <p class="text-body text-dark-300 max-w-2xl mx-auto">
+                    {{ authStore.isAuthenticated ? 
+                        'See when your friends create and update their book lists' : 
+                        'Experience the magic of curation. Browse beautiful, hand-crafted book collections from passionate readers.' }}
+                </p>
             </div>
 
             <!-- Loading -->
@@ -91,7 +97,7 @@
                     <!-- List Stats -->
                     <div class="flex items-center justify-between text-sm text-dark-400 pt-4 border-t border-dark-800">
                         <span class="font-medium">{{ item.items_count }} book{{ item.items_count !== 1 ? 's' : ''
-                        }}</span>
+                            }}</span>
                         <div class="flex items-center gap-4">
                             <button @click.stop="toggleLike(item.id)" class="flex items-center gap-1 transition-colors"
                                 :class="item.is_liked ? 'text-accent-red' : 'text-dark-400 hover:text-accent-red'">
@@ -116,79 +122,124 @@
                 </div>
             </div>
 
-            <!-- Empty State: Who to Follow -->
-            <div v-else class="space-y-8">
-                <div class="card text-center py-12">
-                    <div class="text-6xl mb-6">👋</div>
-                    <h3 class="text-heading-2 mb-4">Welcome to Your Feed</h3>
-                    <p class="text-body text-dark-300 mb-8 max-w-md mx-auto">
-                        Your feed will show list activity from people you follow. Start by following some of the best
-                        curators on Folio!
-                    </p>
-                </div>
-
-                <!-- Who to Follow Module -->
-                <div class="card">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-heading-2">Top Curators to Follow</h3>
-                    </div>
-
-                    <!-- Loading Popular Users -->
-                    <div v-if="loadingPopularUsers" class="space-y-4">
-                        <div v-for="i in 3" :key="i"
-                            class="animate-pulse flex items-center gap-4 p-4 bg-dark-800 rounded-xl">
-                            <div class="w-12 h-12 bg-dark-700 rounded-full"></div>
-                            <div class="flex-1 space-y-2">
-                                <div class="h-4 bg-dark-700 rounded w-1/3"></div>
-                                <div class="h-3 bg-dark-700 rounded w-1/2"></div>
-                            </div>
+            <!-- Popular Curators Section (for non-authenticated users or when feed is empty) -->
+            <div v-if="!authStore.isAuthenticated || feed.length === 0" class="mb-12">
+                <h2 class="text-heading-2 mb-6 flex items-center gap-2">
+                    <span>Popular Curators</span>
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="user in popularUsers.slice(0, 6)" :key="user.id"
+                        class="card card-hover flex items-center gap-4 p-4 cursor-pointer"
+                        @click="$router.push(`/profile/${user.username}`)">
+                        <img v-if="user.picture" :src="user.picture" :alt="user.name"
+                            class="w-16 h-16 rounded-full border-2 border-dark-700" />
+                        <div v-else
+                            class="w-16 h-16 rounded-full bg-dark-800 border-2 border-dark-700 flex items-center justify-center">
+                            <span class="text-2xl text-dark-400">U</span>
                         </div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-white truncate">{{ user.name }}</div>
+                            <div class="text-sm text-dark-400 truncate">@{{ user.username }}</div>
+                            <div class="text-xs text-dark-500 mt-1">{{ user.list_count }} lists</div>
+                        </div>
+
+                        <button v-if="authStore.isAuthenticated && !user.is_following"
+                            @click.stop="followUser(user.username)" :disabled="followingUsers[user.username]"
+                            class="btn-primary text-sm px-3 py-2 disabled:opacity-50 whitespace-nowrap">
+                            {{ followingUsers[user.username] ? 'Following...' : 'Follow' }}
+                        </button>
+                        <button v-else-if="authStore.isAuthenticated" @click.stop
+                            class="btn-secondary text-sm px-3 py-2 whitespace-nowrap">
+                            Following
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Popular Lists Section -->
+            <div v-if="!authStore.isAuthenticated || feed.length === 0">
+                <h2 class="text-heading-2 mb-6 flex items-center gap-2">
+                    <span>Popular Lists</span>
+                </h2>
+            </div>
+
+            <!-- Popular Lists Grid -->
+            <div v-if="popularLists.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div v-for="list in popularLists" :key="list.id" @click="$router.push(`/lists/${list.id}`)"
+                    class="card card-hover cursor-pointer group">
+                    <!-- List Header Image -->
+                    <div v-if="list.header_image_url"
+                        class="aspect-video bg-gradient-to-br from-accent-blue/20 to-accent-purple/20 rounded-xl mb-4 overflow-hidden">
+                        <img :src="list.header_image_url" :alt="list.name"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <div v-else
+                        class="aspect-video bg-gradient-to-br from-accent-blue/20 to-accent-purple/20 rounded-xl mb-4 flex items-center justify-center">
                     </div>
 
-                    <!-- Popular Users List -->
-                    <div v-else-if="popularUsers.length > 0" class="space-y-4">
-                        <div v-for="user in popularUsers" :key="user.id"
-                            class="flex items-center gap-4 p-4 bg-dark-800 rounded-xl hover:bg-dark-700 transition-colors">
-                            <img v-if="user.picture" :src="user.picture" :alt="user.name"
-                                class="w-12 h-12 rounded-full border-2 border-dark-700" />
+                    <!-- List Info -->
+                    <div class="p-4">
+                        <h3 class="text-heading-3 mb-2 line-clamp-2">{{ list.name }}</h3>
+                        <p v-if="list.description" class="text-body text-dark-300 line-clamp-2 mb-4">
+                            {{ list.description }}
+                        </p>
+
+                        <!-- Creator Info -->
+                        <div class="flex items-center gap-3 mb-4">
+                            <img v-if="list.creator.picture" :src="list.creator.picture" :alt="list.creator.name"
+                                class="w-8 h-8 rounded-full border border-dark-700" />
                             <div v-else
-                                class="w-12 h-12 rounded-full bg-dark-700 border-2 border-dark-600 flex items-center justify-center">
-                                <span class="text-dark-400">U</span>
+                                class="w-8 h-8 rounded-full bg-dark-800 border border-dark-700 flex items-center justify-center">
+                                <span class="text-xs text-dark-400">U</span>
                             </div>
-
-                            <div class="flex-1 min-w-0">
-                                <div class="font-semibold text-white">{{ user.name }}</div>
-                                <div class="text-sm text-dark-400">@{{ user.username }}</div>
-                                <div class="text-xs text-dark-500 mt-1">{{ user.list_count }} public lists</div>
+                            <div>
+                                <div class="text-sm font-medium text-white">{{ list.creator.name }}</div>
+                                <div class="text-xs text-dark-400">@{{ list.creator.username }}</div>
                             </div>
+                        </div>
 
-                            <button v-if="!user.is_following" @click="followUser(user.username)"
-                                :disabled="followingUsers[user.username]"
-                                class="btn-primary text-sm px-4 py-2 disabled:opacity-50">
-                                {{ followingUsers[user.username] ? 'Following...' : 'Follow' }}
-                            </button>
-                            <button v-else class="btn-secondary text-sm px-4 py-2">
-                                Following
-                            </button>
+                        <!-- List Stats -->
+                        <div class="flex items-center justify-between text-sm text-dark-400">
+                            <span>{{ list.items_count }} books</span>
+                            <div class="flex items-center gap-4">
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                        </path>
+                                    </svg>
+                                    {{ list.likes_count }}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                                        </path>
+                                    </svg>
+                                    {{ list.comments_count }}
+                                </span>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Empty State -->
-                    <div v-else class="text-center py-8 text-dark-400">
-                        <p>No curators found yet. Check back soon!</p>
-                    </div>
                 </div>
+            </div>
 
-                <!-- CTA -->
-                <div class="text-center">
-                    <button @click="$router.push('/discover')" class="btn-secondary">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        Explore Lists
-                    </button>
-                </div>
+            <!-- Empty State -->
+            <div v-else class="card text-center py-16">
+                <div class="text-6xl mb-6"></div>
+                <h3 class="text-heading-2 mb-4">No lists yet</h3>
+                <p class="text-body text-dark-300 mb-8">
+                    {{ authStore.isAuthenticated ?
+                        'Be the first to create an amazing book list!' :
+                        'Sign up to create and share your own book lists!' }}
+                </p>
+                <button v-if="authStore.isAuthenticated" @click="$router.push('/profile')" class="btn-primary">
+                    Create Your First List
+                </button>
+                <button v-else @click="$router.push('/login')" class="btn-primary">
+                    Sign Up to Create Lists
+                </button>
             </div>
         </main>
 
@@ -208,6 +259,7 @@ const authStore = useAuthStore()
 const feed = ref([])
 const loading = ref(true)
 const popularUsers = ref([])
+const popularLists = ref([])
 const loadingPopularUsers = ref(false)
 const followingUsers = ref({})
 const toastStore = useToastStore()
@@ -275,6 +327,18 @@ const loadPopularUsers = async () => {
     }
 }
 
+const loadPopularLists = async () => {
+    try {
+        const response = await axios.get('/api/lists/popular', {
+            params: { limit: 12 }
+        })
+        popularLists.value = response.data.lists || []
+    } catch (error) {
+        console.error('Error loading popular lists:', error)
+        popularLists.value = []
+    }
+}
+
 const followUser = async (username) => {
     followingUsers.value[username] = true
     try {
@@ -304,6 +368,9 @@ const followUser = async (username) => {
 
 onMounted(async () => {
     try {
+        // Always load popular users and lists for discover functionality
+        await Promise.all([loadPopularUsers(), loadPopularLists()])
+
         // Check if user is authenticated
         if (!authStore.isAuthenticated) {
             console.log('User not authenticated, skipping feed load')
@@ -314,18 +381,11 @@ onMounted(async () => {
         const response = await axios.get('/api/feed')
         console.log('Feed response:', response.data)
         feed.value = response.data.feed || []
-
-        // If feed is empty, load popular users
-        if (feed.value.length === 0) {
-            await loadPopularUsers()
-        }
     } catch (error) {
         console.error('Error loading feed:', error)
         if (error.response?.status === 401) {
             console.log('Unauthorized - user may need to re-authenticate')
         }
-        // Load popular users even on error
-        await loadPopularUsers()
     } finally {
         loading.value = false
     }
