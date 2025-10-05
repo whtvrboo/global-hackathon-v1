@@ -117,6 +117,8 @@ func setupRoutes(e *echo.Echo, app *App) {
 	api.GET("/books/:id", bookHandler.GetBook)
 	api.GET("/discover", discoverHandler.GetRecommendations)
 	api.GET("/discover/lists", discoverHandler.GetTrendingLists)
+	api.GET("/lists/popular", listHandler.GetPopularLists)
+	api.GET("/users/popular", socialHandler.GetPopularUsers)
 
 	// Protected endpoints
 	protected := api.Group("", auth.JWTMiddleware)
@@ -145,6 +147,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	protected.DELETE("/lists/:id", listHandler.DeleteList)
 	protected.POST("/lists/:id/items", listHandler.AddBookToList)
 	protected.PUT("/lists/:id/items/:itemId/order", listHandler.UpdateListItemOrder)
+	protected.PUT("/lists/:id/items/order", listHandler.ReorderListItems)
 	protected.DELETE("/lists/:id/items/:itemId", listHandler.RemoveBookFromList)
 	
 	// List social features

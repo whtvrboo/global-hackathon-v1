@@ -15,15 +15,19 @@ type ListHandler struct {
 }
 
 type CreateListRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	IsPublic    *bool  `json:"is_public"`
+	Name            string  `json:"name"`
+	Description     string  `json:"description"`
+	IsPublic        *bool   `json:"is_public"`
+	HeaderImageURL  *string `json:"header_image_url"`
+	ThemeColor      *string `json:"theme_color"`
 }
 
 type UpdateListRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	IsPublic    *bool   `json:"is_public"`
+	Name            *string `json:"name"`
+	Description     *string `json:"description"`
+	IsPublic        *bool   `json:"is_public"`
+	HeaderImageURL  *string `json:"header_image_url"`
+	ThemeColor      *string `json:"theme_color"`
 }
 
 type AddBookToListRequest struct {
@@ -33,6 +37,10 @@ type AddBookToListRequest struct {
 
 type UpdateListItemOrderRequest struct {
 	Order int `json:"order"`
+}
+
+type ReorderListItemsRequest struct {
+	ItemIDs []string `json:"item_ids"`
 }
 
 // CreateList creates a new list
@@ -65,15 +73,20 @@ func (h *ListHandler) CreateList(c echo.Context) error {
 		isPublic = *req.IsPublic
 	}
 
+	themeColor := "#6366f1"
+	if req.ThemeColor != nil {
+		themeColor = *req.ThemeColor
+	}
+
 	query := `
-		INSERT INTO lists (user_id, name, description, is_public, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
+		INSERT INTO lists (user_id, name, description, is_public, header_image_url, theme_color, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
 	var listID string
 	var createdAt, updatedAt time.Time
-	err := h.DB.QueryRow(ctx, query, userID, req.Name, req.Description, isPublic).Scan(&listID, &createdAt, &updatedAt)
+	err := h.DB.QueryRow(ctx, query, userID, req.Name, req.Description, isPublic, req.HeaderImageURL, themeColor).Scan(&listID, &createdAt, &updatedAt)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to create list",
@@ -81,14 +94,16 @@ func (h *ListHandler) CreateList(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
-		"id":          listID,
-		"user_id":     userID,
-		"name":        req.Name,
-		"description": req.Description,
-		"is_public":   isPublic,
-		"items_count": 0,
-		"created_at":  createdAt,
-		"updated_at":  updatedAt,
+		"id":              listID,
+		"user_id":         userID,
+		"name":            req.Name,
+		"description":     req.Description,
+		"is_public":       isPublic,
+		"header_image_url": req.HeaderImageURL,
+		"theme_color":     themeColor,
+		"items_count":     0,
+		"created_at":      createdAt,
+		"updated_at":      updatedAt,
 	})
 }
 
@@ -122,7 +137,7 @@ func (h *ListHandler) GetUserLists(c echo.Context) error {
 	if isOwnProfile {
 		// Show all lists for own profile
 		query = `
-			SELECT id, user_id, name, description, is_public, items_count, created_at, updated_at
+			SELECT id, user_id, name, description, is_public, header_image_url, theme_color, items_count, created_at, updated_at
 			FROM lists
 			WHERE user_id = $1
 			ORDER BY created_at DESC
@@ -130,7 +145,7 @@ func (h *ListHandler) GetUserLists(c echo.Context) error {
 	} else {
 		// Show only public lists for other users
 		query = `
-			SELECT id, user_id, name, description, is_public, items_count, created_at, updated_at
+			SELECT id, user_id, name, description, is_public, header_image_url, theme_color, items_count, created_at, updated_at
 			FROM lists
 			WHERE user_id = $1 AND is_public = true
 			ORDER BY created_at DESC
@@ -148,30 +163,34 @@ func (h *ListHandler) GetUserLists(c echo.Context) error {
 	lists := []map[string]interface{}{}
 	for rows.Next() {
 		var list struct {
-			ID          string
-			UserID      string
-			Name        string
-			Description *string
-			IsPublic    bool
-			ItemsCount  int
-			CreatedAt   time.Time
-			UpdatedAt   time.Time
+			ID             string
+			UserID         string
+			Name           string
+			Description    *string
+			IsPublic       bool
+			HeaderImageURL *string
+			ThemeColor     string
+			ItemsCount     int
+			CreatedAt      time.Time
+			UpdatedAt      time.Time
 		}
 
-		err := rows.Scan(&list.ID, &list.UserID, &list.Name, &list.Description, &list.IsPublic, &list.ItemsCount, &list.CreatedAt, &list.UpdatedAt)
+		err := rows.Scan(&list.ID, &list.UserID, &list.Name, &list.Description, &list.IsPublic, &list.HeaderImageURL, &list.ThemeColor, &list.ItemsCount, &list.CreatedAt, &list.UpdatedAt)
 		if err != nil {
 			continue
 		}
 
 		lists = append(lists, map[string]interface{}{
-			"id":          list.ID,
-			"user_id":     list.UserID,
-			"name":        list.Name,
-			"description": list.Description,
-			"is_public":   list.IsPublic,
-			"items_count": list.ItemsCount,
-			"created_at":  list.CreatedAt,
-			"updated_at":  list.UpdatedAt,
+			"id":              list.ID,
+			"user_id":         list.UserID,
+			"name":            list.Name,
+			"description":     list.Description,
+			"is_public":       list.IsPublic,
+			"header_image_url": list.HeaderImageURL,
+			"theme_color":     list.ThemeColor,
+			"items_count":     list.ItemsCount,
+			"created_at":      list.CreatedAt,
+			"updated_at":      list.UpdatedAt,
 		})
 	}
 
@@ -193,20 +212,31 @@ func (h *ListHandler) GetList(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	// Get list details
+	// Get list details with creator info
 	var list struct {
-		ID          string
-		UserID      string
-		Name        string
-		Description *string
-		IsPublic    bool
-		ItemsCount  int
-		CreatedAt   time.Time
-		UpdatedAt   time.Time
+		ID             string
+		UserID         string
+		Name           string
+		Description    *string
+		IsPublic       bool
+		HeaderImageURL *string
+		ThemeColor     string
+		ItemsCount     int
+		CreatedAt      time.Time
+		UpdatedAt      time.Time
+		CreatorName    string
+		CreatorUsername string
+		CreatorPicture *string
 	}
 
-	query := `SELECT id, user_id, name, description, is_public, items_count, created_at, updated_at FROM lists WHERE id = $1`
-	err := h.DB.QueryRow(ctx, query, listID).Scan(&list.ID, &list.UserID, &list.Name, &list.Description, &list.IsPublic, &list.ItemsCount, &list.CreatedAt, &list.UpdatedAt)
+	query := `
+		SELECT l.id, l.user_id, l.name, l.description, l.is_public, l.header_image_url, l.theme_color, l.items_count, l.created_at, l.updated_at,
+		       u.name, u.username, u.picture
+		FROM lists l
+		JOIN users u ON l.user_id = u.id
+		WHERE l.id = $1
+	`
+	err := h.DB.QueryRow(ctx, query, listID).Scan(&list.ID, &list.UserID, &list.Name, &list.Description, &list.IsPublic, &list.HeaderImageURL, &list.ThemeColor, &list.ItemsCount, &list.CreatedAt, &list.UpdatedAt, &list.CreatorName, &list.CreatorUsername, &list.CreatorPicture)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "list not found",
@@ -274,16 +304,71 @@ func (h *ListHandler) GetList(c echo.Context) error {
 		})
 	}
 
+	// Get users who liked this list (top 5)
+	likedByQuery := `
+		SELECT u.id, u.username, u.name, u.picture
+		FROM list_likes ll
+		JOIN users u ON ll.user_id = u.id
+		WHERE ll.list_id = $1
+		ORDER BY ll.created_at DESC
+		LIMIT 5
+	`
+
+	likedByRows, err := h.DB.Query(ctx, likedByQuery, listID)
+	likedBy := []map[string]interface{}{}
+	if err == nil {
+		defer likedByRows.Close()
+		for likedByRows.Next() {
+			var user struct {
+				ID       string
+				Username string
+				Name     string
+				Picture  *string
+			}
+			if err := likedByRows.Scan(&user.ID, &user.Username, &user.Name, &user.Picture); err == nil {
+				likedBy = append(likedBy, map[string]interface{}{
+					"id":       user.ID,
+					"username": user.Username,
+					"name":     user.Name,
+					"picture":  user.Picture,
+				})
+			}
+		}
+	}
+
+	// Get likes and comments count
+	var likesCount, commentsCount int
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM list_likes WHERE list_id = $1", listID).Scan(&likesCount)
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM list_comments WHERE list_id = $1", listID).Scan(&commentsCount)
+
+	// Check if current user liked this list
+	var isLiked bool
+	if currentUserID != "" {
+		h.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM list_likes WHERE list_id = $1 AND user_id = $2)", listID, currentUserID).Scan(&isLiked)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"id":          list.ID,
-		"user_id":     list.UserID,
-		"name":        list.Name,
-		"description": list.Description,
-		"is_public":   list.IsPublic,
-		"items_count": list.ItemsCount,
-		"created_at":  list.CreatedAt,
-		"updated_at":  list.UpdatedAt,
-		"items":       items,
+		"id":              list.ID,
+		"user_id":         list.UserID,
+		"name":            list.Name,
+		"description":     list.Description,
+		"is_public":       list.IsPublic,
+		"header_image_url": list.HeaderImageURL,
+		"theme_color":     list.ThemeColor,
+		"items_count":     list.ItemsCount,
+		"likes_count":     likesCount,
+		"comments_count":  commentsCount,
+		"is_liked":        isLiked,
+		"created_at":      list.CreatedAt,
+		"updated_at":      list.UpdatedAt,
+		"creator": map[string]interface{}{
+			"id":       list.UserID,
+			"name":     list.CreatorName,
+			"username": list.CreatorUsername,
+			"picture":  list.CreatorPicture,
+		},
+		"items":    items,
+		"liked_by": likedBy,
 	})
 }
 
@@ -348,19 +433,31 @@ func (h *ListHandler) UpdateList(c echo.Context) error {
 		query += ", is_public = $" + string(rune(argCount+'0'-1))
 		args = append(args, *req.IsPublic)
 	}
+	if req.HeaderImageURL != nil {
+		argCount++
+		query += ", header_image_url = $" + string(rune(argCount+'0'-1))
+		args = append(args, *req.HeaderImageURL)
+	}
+	if req.ThemeColor != nil {
+		argCount++
+		query += ", theme_color = $" + string(rune(argCount+'0'-1))
+		args = append(args, *req.ThemeColor)
+	}
 
-	query += " WHERE id = $1 RETURNING id, name, description, is_public, updated_at"
+	query += " WHERE id = $1 RETURNING id, name, description, is_public, header_image_url, theme_color, updated_at"
 	args = append([]interface{}{listID}, args...)
 
 	var updatedList struct {
-		ID          string
-		Name        string
-		Description *string
-		IsPublic    bool
-		UpdatedAt   time.Time
+		ID             string
+		Name           string
+		Description    *string
+		IsPublic       bool
+		HeaderImageURL *string
+		ThemeColor     string
+		UpdatedAt      time.Time
 	}
 
-	err = h.DB.QueryRow(ctx, query, args...).Scan(&updatedList.ID, &updatedList.Name, &updatedList.Description, &updatedList.IsPublic, &updatedList.UpdatedAt)
+	err = h.DB.QueryRow(ctx, query, args...).Scan(&updatedList.ID, &updatedList.Name, &updatedList.Description, &updatedList.IsPublic, &updatedList.HeaderImageURL, &updatedList.ThemeColor, &updatedList.UpdatedAt)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to update list",
@@ -368,11 +465,13 @@ func (h *ListHandler) UpdateList(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"id":          updatedList.ID,
-		"name":        updatedList.Name,
-		"description": updatedList.Description,
-		"is_public":   updatedList.IsPublic,
-		"updated_at":  updatedList.UpdatedAt,
+		"id":              updatedList.ID,
+		"name":            updatedList.Name,
+		"description":     updatedList.Description,
+		"is_public":       updatedList.IsPublic,
+		"header_image_url": updatedList.HeaderImageURL,
+		"theme_color":     updatedList.ThemeColor,
+		"updated_at":      updatedList.UpdatedAt,
 	})
 }
 
@@ -558,6 +657,85 @@ func (h *ListHandler) UpdateListItemOrder(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "item order updated",
+	})
+}
+
+// ReorderListItems reorders all items in a list
+func (h *ListHandler) ReorderListItems(c echo.Context) error {
+	userID := auth.GetUserID(c)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	listID := c.Param("id")
+	if listID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "list_id is required",
+		})
+	}
+
+	var req ReorderListItemsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	if len(req.ItemIDs) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "item_ids cannot be empty",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 10*time.Second)
+	defer cancel()
+
+	// Start transaction
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to start transaction",
+		})
+	}
+	defer tx.Rollback(ctx)
+
+	// Check if list exists and belongs to user
+	var ownerID string
+	err = tx.QueryRow(ctx, "SELECT user_id FROM lists WHERE id = $1", listID).Scan(&ownerID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "list not found",
+		})
+	}
+
+	if ownerID != userID {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error": "you can only reorder your own lists",
+		})
+	}
+
+	// Update item orders in a single transaction
+	for i, itemID := range req.ItemIDs {
+		_, err = tx.Exec(ctx, "UPDATE list_items SET item_order = $1 WHERE id = $2 AND list_id = $3", i, itemID, listID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "failed to update item order",
+			})
+		}
+	}
+
+	// Commit transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to commit transaction",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "items reordered successfully",
 	})
 }
 
@@ -834,6 +1012,99 @@ func (h *ListHandler) AddListComment(c echo.Context) error {
 		"content":    req.Content,
 		"created_at": createdAt,
 		"updated_at": updatedAt,
+	})
+}
+
+// GetPopularLists gets popular public lists
+func (h *ListHandler) GetPopularLists(c echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	limit := c.QueryParam("limit")
+	if limit == "" {
+		limit = "12"
+	}
+
+	query := `
+		SELECT l.id, l.user_id, l.name, l.description, l.is_public, l.header_image_url, l.theme_color, l.items_count, l.created_at, l.updated_at,
+		       u.name, u.username, u.picture,
+		       COALESCE(like_counts.likes_count, 0) as likes_count,
+		       COALESCE(comment_counts.comments_count, 0) as comments_count
+		FROM lists l
+		JOIN users u ON l.user_id = u.id
+		LEFT JOIN (
+			SELECT list_id, COUNT(*) as likes_count
+			FROM list_likes
+			GROUP BY list_id
+		) like_counts ON l.id = like_counts.list_id
+		LEFT JOIN (
+			SELECT list_id, COUNT(*) as comments_count
+			FROM list_comments
+			GROUP BY list_id
+		) comment_counts ON l.id = comment_counts.list_id
+		WHERE l.is_public = true AND l.items_count > 0
+		ORDER BY (COALESCE(like_counts.likes_count, 0) + COALESCE(comment_counts.comments_count, 0)) DESC, l.created_at DESC
+		LIMIT $1
+	`
+
+	rows, err := h.DB.Query(ctx, query, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch popular lists",
+		})
+	}
+	defer rows.Close()
+
+	lists := []map[string]interface{}{}
+	for rows.Next() {
+		var list struct {
+			ID             string
+			UserID         string
+			Name           string
+			Description    *string
+			IsPublic       bool
+			HeaderImageURL *string
+			ThemeColor     string
+			ItemsCount     int
+			CreatedAt      time.Time
+			UpdatedAt      time.Time
+			CreatorName    string
+			CreatorUsername string
+			CreatorPicture *string
+			LikesCount     int
+			CommentsCount  int
+		}
+
+		err := rows.Scan(&list.ID, &list.UserID, &list.Name, &list.Description, &list.IsPublic, &list.HeaderImageURL, &list.ThemeColor, &list.ItemsCount, &list.CreatedAt, &list.UpdatedAt, &list.CreatorName, &list.CreatorUsername, &list.CreatorPicture, &list.LikesCount, &list.CommentsCount)
+		if err != nil {
+			continue
+		}
+
+		lists = append(lists, map[string]interface{}{
+			"id":              list.ID,
+			"user_id":         list.UserID,
+			"name":            list.Name,
+			"description":     list.Description,
+			"is_public":       list.IsPublic,
+			"header_image_url": list.HeaderImageURL,
+			"theme_color":     list.ThemeColor,
+			"items_count":     list.ItemsCount,
+			"created_at":      list.CreatedAt,
+			"updated_at":      list.UpdatedAt,
+			"creator": map[string]interface{}{
+				"id":       list.UserID,
+				"name":     list.CreatorName,
+				"username": list.CreatorUsername,
+				"picture":  list.CreatorPicture,
+			},
+			"likes_count":    list.LikesCount,
+			"comments_count": list.CommentsCount,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"lists": lists,
+		"count": len(lists),
 	})
 }
 

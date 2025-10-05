@@ -4,7 +4,7 @@
       <div class="mb-8">
         <div
           class="w-16 h-16 bg-gradient-to-br from-accent-red to-accent-blue rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <span class="text-3xl">📚</span>
+          <span class="text-3xl"></span>
         </div>
         <h1 class="text-display-2 mb-4 text-gradient">Welcome to Folio</h1>
         <p class="text-body text-dark-300">Your personal reading journal</p>
@@ -37,12 +37,12 @@
         <button @click="tryAsGuest" :disabled="loading"
           class="btn-secondary w-full flex items-center justify-center gap-3 py-4">
           <span v-if="loading" class="animate-spin rounded-full h-5 w-5 border-2 border-dark-400 border-t-white"></span>
-          <span v-else class="text-xl">👤</span>
+          <span v-else class="text-xl">U</span>
           {{ loading ? 'Creating guest account...' : 'Try as Guest' }}
         </button>
 
         <div class="mt-8 p-4 bg-dark-800/50 rounded-xl border border-dark-700">
-          <h3 class="text-sm font-semibold text-white mb-2">✨ Guest Account Benefits</h3>
+          <h3 class="text-sm font-semibold text-white mb-2">Guest Account Benefits</h3>
           <ul class="text-xs text-dark-300 space-y-1">
             <li>• Save books locally on your device</li>
             <li>• Try all features risk-free</li>

@@ -11,7 +11,7 @@
         <div v-if="existingLogs.length > 0"
           class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
           <div class="flex items-start gap-3">
-            <div class="text-blue-500 text-xl">📚</div>
+            <div class="text-blue-500 text-xl"></div>
             <div class="flex-1">
               <h3 class="font-semibold text-blue-900 mb-2">You've read this book before!</h3>
               <p class="text-blue-700 text-sm mb-3">
@@ -32,12 +32,12 @@
               <div class="flex gap-3">
                 <button @click="handleLogAnotherReading"
                   class="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-                  <span>📖</span>
+                  <span></span>
                   <span>Log This New Reading</span>
                 </button>
                 <button @click="handleViewExistingLogs"
                   class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
-                  <span>👁️</span>
+                  <span></span>
                   <span>View Existing Logs</span>
                 </button>
               </div>
@@ -96,7 +96,7 @@
               <input type="checkbox" id="spoiler-flag" v-model="form.spoiler_flag"
                 class="w-4 h-4 text-accent-red bg-gray-100 border-gray-300 rounded focus:ring-accent-red focus:ring-2" />
               <label for="spoiler-flag" class="text-sm text-gray-600">
-                ⚠️ Contains spoilers
+                Contains spoilers
               </label>
             </div>
           </div>
@@ -189,8 +189,8 @@ const isReread = ref(false)
 const toastStore = useToastStore()
 
 const statusOptions = [
-  { value: 'want_to_read', label: 'Want to Read', emoji: '📚', description: 'Add to your list' },
-  { value: 'reading', label: 'Currently Reading', emoji: '📖', description: 'Reading right now' },
+  { value: 'want_to_read', label: 'Want to Read', emoji: '', description: 'Add to your list' },
+  { value: 'reading', label: 'Currently Reading', emoji: '', description: 'Reading right now' },
   { value: 'read', label: 'Read', emoji: '✅', description: 'Finished this book' },
   { value: 'dnf', label: 'Did Not Finish', emoji: '🚫', description: 'Stopped reading' }
 ]

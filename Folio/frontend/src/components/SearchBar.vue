@@ -44,7 +44,7 @@
               <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
                 class="w-16 h-24 object-cover rounded-xl shadow-lg group-hover:scale-105 transition-transform duration-200" />
               <div v-else class="w-16 h-24 bg-dark-800 rounded-xl flex items-center justify-center">
-                <span class="text-2xl text-dark-400">📚</span>
+                <span class="text-2xl text-dark-400"></span>
               </div>
             </div>
             <div class="flex-1 min-w-0">

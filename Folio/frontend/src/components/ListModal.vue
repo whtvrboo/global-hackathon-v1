@@ -4,12 +4,13 @@
         leave-to-class="opacity-0">
         <div v-if="show" @click="$emit('close')"
             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div @click.stop class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
+            <div @click.stop
+                class="bg-dark-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold">
+                    <h2 class="text-2xl font-bold text-white">
                         {{ isEditing ? 'Edit List' : 'Create New List' }}
                     </h2>
-                    <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <button @click="$emit('close')" class="text-dark-400 hover:text-white transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12"></path>
@@ -20,7 +21,7 @@
                 <form @submit.prevent="handleSubmit" class="space-y-6">
                     <!-- List Name -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <label class="block text-sm font-medium text-white mb-2">
                             List Name *
                         </label>
                         <Input v-model="form.name" placeholder="e.g., My Favorite Fantasy Books" required />
@@ -28,29 +29,52 @@
 
                     <!-- Description -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <label class="block text-sm font-medium text-white mb-2">
                             Description
                         </label>
                         <TextArea v-model="form.description" placeholder="Describe what this list is about..."
                             :rows="3" />
                     </div>
 
+                    <!-- Header Image URL -->
+                    <div>
+                        <label class="block text-sm font-medium text-white mb-2">
+                            Header Image URL
+                        </label>
+                        <Input v-model="form.header_image_url" placeholder="https://example.com/image.jpg" />
+                        <p class="text-xs text-dark-400 mt-1">Optional: Add a beautiful header image for your list</p>
+                    </div>
+
+                    <!-- Theme Color -->
+                    <div>
+                        <label class="block text-sm font-medium text-white mb-2">
+                            Theme Color
+                        </label>
+                        <div class="flex items-center gap-4">
+                            <input v-model="form.theme_color" type="color"
+                                class="w-12 h-12 rounded-lg border-2 border-dark-700 cursor-pointer" />
+                            <Input v-model="form.theme_color" placeholder="#6366f1" class="flex-1" />
+                        </div>
+                        <p class="text-xs text-dark-400 mt-1">Choose a color that represents your list's theme</p>
+                    </div>
+
                     <!-- Visibility -->
                     <div class="flex items-center gap-3">
                         <input v-model="form.is_public" type="checkbox" id="is_public"
-                            class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
-                        <label for="is_public" class="text-sm text-gray-700">
+                            class="w-4 h-4 text-accent-blue border-dark-700 rounded focus:ring-accent-blue bg-dark-800" />
+                        <label for="is_public" class="text-sm text-white">
                             Make this list public (visible to other users)
                         </label>
                     </div>
 
                     <!-- Error -->
-                    <div v-if="error" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <div v-if="error"
+                        class="p-4 bg-accent-red/10 border border-accent-red/20 rounded-lg text-accent-red text-sm">
                         {{ error }}
                     </div>
 
                     <!-- Actions -->
-                    <div class="flex gap-3 justify-end pt-4 border-t">
+                    <div class="flex gap-3 justify-end pt-4 border-t border-dark-800">
                         <SecondaryButton @click="$emit('close')" type="button">
                             Cancel
                         </SecondaryButton>
@@ -84,7 +108,9 @@ const emit = defineEmits(['close', 'success'])
 const form = reactive({
     name: '',
     description: '',
-    is_public: true
+    is_public: true,
+    header_image_url: '',
+    theme_color: '#6366f1'
 })
 
 const loading = ref(false)
@@ -100,12 +126,16 @@ watch(() => props.show, (newShow) => {
             form.name = props.list.name || ''
             form.description = props.list.description || ''
             form.is_public = props.list.is_public !== false
+            form.header_image_url = props.list.header_image_url || ''
+            form.theme_color = props.list.theme_color || '#6366f1'
         } else {
             // Creating new list
             isEditing.value = false
             form.name = ''
             form.description = ''
             form.is_public = true
+            form.header_image_url = ''
+            form.theme_color = '#6366f1'
         }
         error.value = null
     }
@@ -126,7 +156,9 @@ const handleSubmit = async () => {
             await axios.put(`/api/lists/${props.list.id}`, {
                 name: form.name,
                 description: form.description,
-                is_public: form.is_public
+                is_public: form.is_public,
+                header_image_url: form.header_image_url || null,
+                theme_color: form.theme_color
             })
 
             toastStore.success(`List "${form.name}" updated successfully!`)
@@ -135,7 +167,9 @@ const handleSubmit = async () => {
             const response = await axios.post('/api/lists', {
                 name: form.name,
                 description: form.description,
-                is_public: form.is_public
+                is_public: form.is_public,
+                header_image_url: form.header_image_url || null,
+                theme_color: form.theme_color
             })
 
             // If a book was provided, add it to the new list

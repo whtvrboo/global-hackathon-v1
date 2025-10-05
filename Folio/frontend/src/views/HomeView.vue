@@ -1,43 +1,5 @@
 <template>
   <div class="min-h-screen bg-dark-950">
-    <!-- Header -->
-    <header class="glass-strong border-b border-dark-800 sticky top-0 z-50">
-      <div class="container-mobile max-w-7xl mx-auto">
-        <div class="flex items-center justify-between py-4">
-          <!-- Logo -->
-          <div class="flex items-center gap-3">
-            <div
-              class="w-8 h-8 bg-gradient-to-br from-accent-red to-accent-blue rounded-lg flex items-center justify-center">
-              <span class="text-white font-bold text-sm">F</span>
-            </div>
-            <h1 class="text-xl font-bold text-white">Folio</h1>
-          </div>
-
-          <!-- Desktop Navigation -->
-          <nav class="hidden md:flex items-center gap-6">
-            <router-link to="/discover" class="btn-ghost">
-              Discover
-            </router-link>
-            <router-link to="/feed" class="btn-ghost">
-              Feed
-            </router-link>
-            <router-link to="/profile" class="btn-ghost">
-              Profile
-            </router-link>
-            <button @click="authStore.logout()" class="btn-ghost">
-              Logout
-            </button>
-          </nav>
-
-          <!-- Mobile Menu Button -->
-          <button class="md:hidden p-2 text-dark-300 hover:text-white transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </header>
 
     <!-- Main Content - TikTok-inspired content-first layout -->
     <main class="min-h-screen">
@@ -61,7 +23,7 @@
       <!-- Public Browse Section for Unauthenticated Users -->
       <section v-if="!authStore.user" class="container-mobile max-w-7xl mx-auto mb-8">
         <div class="text-center mb-8">
-          <h2 class="text-heading-2 mb-4">📖 Browse Popular Books</h2>
+          <h2 class="text-heading-2 mb-4">Browse Popular Books</h2>
           <p class="text-body text-dark-300">Discover what others are reading</p>
         </div>
 
@@ -73,10 +35,9 @@
               <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title" class="w-full h-full object-cover" />
               <div v-else
                 class="w-full h-full bg-gradient-to-br from-accent-red/20 to-accent-blue/20 flex items-center justify-center">
-                <span class="text-4xl">📚</span>
               </div>
               <div v-if="book.rating" class="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                {{ book.rating.toFixed(1) }} ⭐
+                {{ book.rating.toFixed(1) }}
               </div>
             </div>
             <h3 class="font-semibold text-white text-sm line-clamp-2 mb-1">{{ book.title }}</h3>
@@ -109,7 +70,7 @@
         <!-- Trending Books Section -->
         <section class="container-mobile max-w-7xl mx-auto">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-heading-2">🔥 Trending Now</h2>
+            <h2 class="text-heading-2">Trending Now</h2>
             <button class="text-accent-red hover:text-accent-red/80 text-sm font-medium">
               See All
             </button>
@@ -117,25 +78,31 @@
 
           <!-- Horizontal Scroll Cards -->
           <div class="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            <div v-for="i in 5" :key="i" class="flex-shrink-0 w-48">
-              <div class="card card-hover group">
+            <div v-for="(book, index) in trendingBooks" :key="book.book.id" class="flex-shrink-0 w-48">
+              <div class="card card-hover group cursor-pointer" @click="handleBookSelect(book.book)">
                 <div class="aspect-[2/3] bg-dark-800 rounded-xl mb-4 relative overflow-hidden">
-                  <div
+                  <img v-if="book.book.cover_url" :src="book.book.cover_url" :alt="book.book.title"
+                    class="w-full h-full object-cover" />
+                  <div v-else
                     class="w-full h-full bg-gradient-to-br from-accent-red/20 to-accent-blue/20 flex items-center justify-center">
-                    <span class="text-4xl">📚</span>
                   </div>
                   <div
                     class="absolute top-3 right-3 w-8 h-8 bg-accent-red rounded-full flex items-center justify-center">
-                    <span class="text-white text-xs font-bold">{{ i }}</span>
+                    <span class="text-white text-xs font-bold">{{ index + 1 }}</span>
+                  </div>
+                  <div v-if="book.book.rating"
+                    class="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {{ book.book.rating.toFixed(1) }}
                   </div>
                 </div>
-                <h3 class="font-semibold text-white mb-1 line-clamp-2">Sample Book Title {{ i }}</h3>
-                <p class="text-caption mb-3">by Author Name</p>
+                <h3 class="font-semibold text-white mb-1 line-clamp-2">{{ book.book.title }}</h3>
+                <p class="text-caption mb-3">by {{ book.book.authors?.[0] || 'Unknown Author' }}</p>
                 <div class="flex items-center gap-2">
                   <div class="flex">
-                    <span v-for="star in 5" :key="star" class="text-accent-orange text-sm">★</span>
+                    <span v-for="star in Math.floor(book.book.rating || 0)" :key="star"
+                      class="text-accent-orange text-sm">★</span>
                   </div>
-                  <span class="text-caption">4.{{ i }}</span>
+                  <span class="text-caption">{{ book.book.rating?.toFixed(1) || 'N/A' }}</span>
                 </div>
               </div>
             </div>
@@ -145,7 +112,7 @@
         <!-- TikTok-style Discovery Feed -->
         <section class="container-mobile max-w-7xl mx-auto">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-heading-2">✨ Discover Books</h2>
+            <h2 class="text-heading-2">Discover Books</h2>
             <div class="flex gap-2">
               <button class="text-accent-blue hover:text-accent-blue/80 text-sm font-medium">
                 Refresh
@@ -159,12 +126,13 @@
 
           <!-- Swipeable Discovery Cards -->
           <div class="space-y-6">
-            <div v-for="i in 3" :key="i" class="flex justify-center">
-              <div class="card card-hover group max-w-sm w-full">
+            <div v-for="book in discoveryBooks" :key="book.book.id" class="flex justify-center">
+              <div class="card card-hover group max-w-sm w-full cursor-pointer" @click="handleBookSelect(book.book)">
                 <div class="aspect-[2/3] bg-dark-800 rounded-xl mb-4 relative overflow-hidden">
-                  <div
+                  <img v-if="book.book.cover_url" :src="book.book.cover_url" :alt="book.book.title"
+                    class="w-full h-full object-cover" />
+                  <div v-else
                     class="w-full h-full bg-gradient-to-br from-accent-red/20 to-accent-blue/20 flex items-center justify-center">
-                    <span class="text-4xl">📚</span>
                   </div>
                   <div
                     class="absolute top-3 right-3 w-8 h-8 bg-accent-green rounded-full flex items-center justify-center">
@@ -174,38 +142,41 @@
                     <div class="glass-strong rounded-lg p-3">
                       <div class="flex items-center gap-2 mb-1">
                         <div class="flex">
-                          <span v-for="star in 5" :key="star" class="text-accent-orange text-sm">★</span>
+                          <span v-for="star in Math.floor(book.book.rating || 0)" :key="star"
+                            class="text-accent-orange text-sm">★</span>
                         </div>
-                        <span class="text-white text-sm font-semibold">4.{{ i }}</span>
+                        <span class="text-white text-sm font-semibold">{{ book.book.rating?.toFixed(1) || 'N/A'
+                        }}</span>
                       </div>
-                      <p class="text-white text-xs">Based on your preferences</p>
+                      <p class="text-white text-xs">{{ book.reason.description }}</p>
                     </div>
                   </div>
                 </div>
 
                 <div class="p-4">
-                  <h3 class="font-semibold text-white line-clamp-2 mb-2 text-lg">Sample Book Title {{ i }}</h3>
-                  <p class="text-caption mb-3">by Author Name • 2024</p>
+                  <h3 class="font-semibold text-white line-clamp-2 mb-2 text-lg">{{ book.book.title }}</h3>
+                  <p class="text-caption mb-3">by {{ book.book.authors?.[0] || 'Unknown Author' }} • {{
+                    book.book.published_date?.split('-')[0] || 'Unknown Year' }}</p>
                   <p class="text-caption text-dark-300 mb-4 line-clamp-2">
-                    A compelling story that will keep you turning pages late into the night...
+                    {{ book.book.description || 'No description available.' }}
                   </p>
 
                   <!-- Engagement Stats -->
                   <div class="flex items-center justify-between mb-4 text-sm">
                     <div class="flex items-center gap-4">
-                      <span class="text-dark-400">👥 1.2k readers</span>
-                      <span class="text-dark-400">💬 89 reviews</span>
+                      <span class="text-dark-400">{{ book.book.log_count || 0 }} readers</span>
+                      <span class="text-dark-400">{{ book.book.page_count || 'N/A' }} pages</span>
                     </div>
-                    <span class="text-accent-green text-xs font-medium">Trending</span>
+                    <span class="text-accent-green text-xs font-medium">{{ book.reason.type }}</span>
                   </div>
 
                   <!-- Action Buttons -->
                   <div class="flex gap-2">
-                    <button class="flex-1 btn-primary text-sm py-2">
-                      ❤️ Like
+                    <button class="flex-1 btn-primary text-sm py-2" @click.stop="handleLogBook(book.book)">
+                      Log Book
                     </button>
                     <button class="flex-1 btn-secondary text-sm py-2">
-                      📚 Add to List
+                      Like
                     </button>
                   </div>
                 </div>
@@ -217,7 +188,7 @@
         <!-- Trending Lists Section -->
         <section class="container-mobile max-w-7xl mx-auto">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-heading-2">📚 Trending Lists</h2>
+            <h2 class="text-heading-2">Trending Lists</h2>
             <button @click="loadTrendingLists" class="text-accent-blue hover:text-accent-blue/80 text-sm font-medium">
               Refresh
             </button>
@@ -246,7 +217,7 @@
                     <img v-if="list.user.picture" :src="list.user.picture" :alt="list.user.name"
                       class="w-6 h-6 rounded-full" />
                     <div v-else class="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center">
-                      <span class="text-xs text-dark-400">👤</span>
+                      <span class="text-xs text-dark-400">U</span>
                     </div>
                     <span class="text-sm text-dark-300">by {{ list.user.name }}</span>
                   </div>
@@ -267,7 +238,7 @@
 
           <!-- Empty State for Lists -->
           <div v-else class="card text-center py-8">
-            <div class="text-4xl mb-4">📚</div>
+            <div class="text-4xl mb-4"></div>
             <h3 class="text-heading-3 mb-2">No trending lists yet</h3>
             <p class="text-caption text-dark-300">Be the first to create a public list!</p>
           </div>
@@ -276,7 +247,7 @@
         <!-- Personalized Recommendations -->
         <section class="container-mobile max-w-7xl mx-auto">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-heading-2">🎯 For You</h2>
+            <h2 class="text-heading-2">For You</h2>
             <button class="text-accent-blue hover:text-accent-blue/80 text-sm font-medium">
               Refresh
             </button>
@@ -284,11 +255,13 @@
 
           <!-- Vertical Feed Cards -->
           <div class="space-y-4">
-            <div v-for="i in 2" :key="i" class="card card-hover">
+            <div v-for="book in personalizedRecommendations" :key="book.book.id" class="card card-hover cursor-pointer"
+              @click="handleBookSelect(book.book)">
               <div class="flex gap-4">
                 <div class="relative">
-                  <div class="w-20 h-32 bg-dark-800 rounded-xl flex items-center justify-center">
-                    <span class="text-2xl">📖</span>
+                  <div class="w-20 h-32 bg-dark-800 rounded-xl flex items-center justify-center overflow-hidden">
+                    <img v-if="book.book.cover_url" :src="book.book.cover_url" :alt="book.book.title"
+                      class="w-full h-full object-cover" />
                   </div>
                   <div
                     class="absolute -top-2 -right-2 w-6 h-6 bg-accent-green rounded-full flex items-center justify-center">
@@ -297,7 +270,7 @@
                 </div>
                 <div class="flex-1">
                   <div class="flex items-start justify-between mb-2">
-                    <h3 class="text-heading-3 line-clamp-2">Recommended Book Title {{ i }}</h3>
+                    <h3 class="text-heading-3 line-clamp-2">{{ book.book.title }}</h3>
                     <button class="text-dark-400 hover:text-white p-1">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -305,13 +278,14 @@
                       </svg>
                     </button>
                   </div>
-                  <p class="text-body text-dark-300 mb-3">by Author Name • 2024</p>
+                  <p class="text-body text-dark-300 mb-3">by {{ book.book.authors?.[0] || 'Unknown Author' }} • {{
+                    book.book.published_date?.split('-')[0] || 'Unknown Year' }}</p>
                   <p class="text-caption text-dark-400 mb-4 line-clamp-2">
-                    Based on your reading history and preferences, we think you'll love this book...
+                    {{ book.reason.description }}
                   </p>
                   <div class="flex items-center gap-3">
-                    <button class="btn-primary text-sm px-4 py-2">
-                      Add to List
+                    <button class="btn-primary text-sm px-4 py-2" @click.stop="handleLogBook(book.book)">
+                      Log Book
                     </button>
                     <button class="btn-ghost text-sm px-4 py-2">
                       Preview
@@ -325,7 +299,7 @@
 
         <!-- Quick Actions Grid -->
         <section class="container-mobile max-w-7xl mx-auto">
-          <h2 class="text-heading-2 mb-6">⚡ Quick Actions</h2>
+          <h2 class="text-heading-2 mb-6">Quick Actions</h2>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <router-link to="/discover" class="card card-hover group text-center p-6">
               <div
@@ -386,7 +360,7 @@
                   class="w-12 h-12 rounded-full border-2 border-dark-700" />
                 <div v-else
                   class="w-12 h-12 rounded-full bg-dark-800 border-2 border-dark-700 flex items-center justify-center">
-                  <span class="text-dark-400">👤</span>
+                  <span class="text-dark-400">U</span>
                 </div>
                 <div
                   class="absolute -top-1 -right-1 w-5 h-5 bg-accent-orange rounded-full flex items-center justify-center">
@@ -410,47 +384,6 @@
       </div>
     </main>
 
-    <!-- Bottom Navigation (Mobile) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-strong border-t border-dark-800 z-40">
-      <div class="flex items-center justify-around py-2">
-        <router-link to="/"
-          class="flex flex-col items-center gap-1 p-3 text-dark-400 hover:text-white transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
-            </path>
-          </svg>
-          <span class="text-xs">Home</span>
-        </router-link>
-
-        <router-link to="/discover"
-          class="flex flex-col items-center gap-1 p-3 text-dark-400 hover:text-white transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <span class="text-xs">Discover</span>
-        </router-link>
-
-        <router-link to="/feed"
-          class="flex flex-col items-center gap-1 p-3 text-dark-400 hover:text-white transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16">
-            </path>
-          </svg>
-          <span class="text-xs">Feed</span>
-        </router-link>
-
-        <router-link to="/profile"
-          class="flex flex-col items-center gap-1 p-3 text-dark-400 hover:text-white transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
-          <span class="text-xs">Profile</span>
-        </router-link>
-      </div>
-    </nav>
 
     <!-- Book Detail Modal -->
     <BookDetailModal :show="showBookDetail" :book-id="selectedBookId" @close="showBookDetail = false"
@@ -483,6 +416,9 @@ const showConversionModal = ref(false)
 const bookToLog = ref(null)
 const trendingLists = ref([])
 const publicBooks = ref([])
+const trendingBooks = ref([])
+const discoveryBooks = ref([])
+const personalizedRecommendations = ref([])
 
 const handleBookSelect = (book) => {
   selectedBookId.value = book.id
@@ -503,6 +439,9 @@ const handleLogSuccess = () => {
 // Load trending lists on component mount
 onMounted(async () => {
   await loadTrendingLists()
+  await loadTrendingBooks()
+  await loadDiscoveryBooks()
+  await loadPersonalizedRecommendations()
   // Load public books for unauthenticated users
   if (!authStore.user) {
     await loadPublicBooks()
@@ -544,6 +483,42 @@ const loadPublicBooks = async () => {
   } catch (error) {
     console.error('Error loading public books:', error)
     publicBooks.value = []
+  }
+}
+
+const loadTrendingBooks = async () => {
+  try {
+    const response = await axios.get('/api/discover', {
+      params: { limit: 5 }
+    })
+    trendingBooks.value = response.data.recommendations || []
+  } catch (error) {
+    console.error('Error loading trending books:', error)
+    trendingBooks.value = []
+  }
+}
+
+const loadDiscoveryBooks = async () => {
+  try {
+    const response = await axios.get('/api/discover', {
+      params: { limit: 3 }
+    })
+    discoveryBooks.value = response.data.recommendations || []
+  } catch (error) {
+    console.error('Error loading discovery books:', error)
+    discoveryBooks.value = []
+  }
+}
+
+const loadPersonalizedRecommendations = async () => {
+  try {
+    const response = await axios.get('/api/discover', {
+      params: { limit: 2 }
+    })
+    personalizedRecommendations.value = response.data.recommendations || []
+  } catch (error) {
+    console.error('Error loading personalized recommendations:', error)
+    personalizedRecommendations.value = []
   }
 }
 

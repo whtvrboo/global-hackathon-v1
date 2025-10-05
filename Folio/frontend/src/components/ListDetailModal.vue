@@ -21,7 +21,7 @@
                                     class="w-10 h-10 rounded-full border-2 border-dark-600" />
                                 <div v-else
                                     class="w-10 h-10 rounded-full bg-dark-800 border-2 border-dark-600 flex items-center justify-center">
-                                    <span class="text-dark-400">👤</span>
+                                    <span class="text-dark-400">U</span>
                                 </div>
                                 <div>
                                     <div class="font-semibold text-white">{{ list.user?.name || 'Unknown' }}</div>
@@ -31,7 +31,7 @@
                             <!-- Social Stats -->
                             <div class="flex items-center gap-6">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-accent-orange">📚</span>
+                                    <span class="text-accent-orange"></span>
                                     <span class="text-body"><strong>{{ list.items_count || 0 }}</strong> books</span>
                                 </div>
                                 <button @click="toggleLike" class="flex items-center gap-2 transition-colors"
@@ -90,7 +90,7 @@
                                 <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
                                     class="w-20 h-32 object-cover rounded-xl shadow-lg" />
                                 <div v-else class="w-20 h-32 bg-dark-800 rounded-xl flex items-center justify-center">
-                                    <span class="text-2xl text-dark-400">📚</span>
+                                    <span class="text-2xl text-dark-400"></span>
                                 </div>
                             </div>
                             <div class="flex-1">
@@ -109,7 +109,7 @@
                     </div>
 
                     <div v-else class="text-center py-12 text-dark-400">
-                        <p class="text-4xl mb-4">📚</p>
+                        <p class="text-4xl mb-4"></p>
                         <p>This list is empty</p>
                     </div>
 
@@ -144,7 +144,7 @@
                                 <img v-if="comment.user.picture" :src="comment.user.picture" :alt="comment.user.name"
                                     class="w-10 h-10 rounded-full" />
                                 <div v-else class="w-10 h-10 rounded-full bg-dark-800 flex items-center justify-center">
-                                    <span class="text-dark-400 text-sm">👤</span>
+                                    <span class="text-dark-400 text-sm">U</span>
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-1">

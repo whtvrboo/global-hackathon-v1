@@ -13,7 +13,7 @@
                         <img v-if="log.book.cover_url" :src="log.book.cover_url" :alt="log.book.title"
                             class="w-24 h-36 object-cover rounded-xl shadow-xl" />
                         <div v-else class="w-24 h-36 bg-dark-800 rounded-xl flex items-center justify-center">
-                            <span class="text-4xl text-dark-400">📚</span>
+                            <span class="text-4xl text-dark-400"></span>
                         </div>
                         <div class="flex-1">
                             <h2 class="text-heading-2 mb-2">{{ log.book.title }}</h2>
@@ -52,7 +52,7 @@
                             class="w-16 h-16 rounded-full border-2 border-dark-600" />
                         <div v-else
                             class="w-16 h-16 rounded-full bg-dark-800 border-2 border-dark-600 flex items-center justify-center">
-                            <span class="text-dark-400 text-2xl">👤</span>
+                            <span class="text-dark-400 text-2xl">U</span>
                         </div>
                         <div class="flex-1">
                             <div class="font-semibold text-heading-3">{{ log.user.name }}</div>
@@ -65,7 +65,7 @@
                     <!-- Spoiler Warning -->
                     <div v-if="log.spoiler_flag && !showSpoiler"
                         class="mb-6 p-6 bg-accent-red/10 border-2 border-accent-red/20 rounded-xl text-center">
-                        <div class="text-4xl mb-3">⚠️</div>
+                        <div class="text-4xl mb-3">!</div>
                         <h3 class="text-heading-3 text-accent-red mb-2">This review contains spoilers</h3>
                         <p class="text-body text-dark-300 mb-4">
                             Are you sure you want to read it?
@@ -158,7 +158,7 @@
                                 <img v-if="comment.user.picture" :src="comment.user.picture" :alt="comment.user.name"
                                     class="w-10 h-10 rounded-full" />
                                 <div v-else class="w-10 h-10 rounded-full bg-dark-800 flex items-center justify-center">
-                                    <span class="text-dark-400 text-sm">👤</span>
+                                    <span class="text-dark-400 text-sm">U</span>
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-1">

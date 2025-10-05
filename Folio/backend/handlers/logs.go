@@ -233,7 +233,7 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 	})
 }
 
-// GetFeed gets the reading feed for the current user
+// GetFeed gets the list-based activity feed for the current user
 func (h *LogHandler) GetFeed(c echo.Context) error {
 	userID := auth.GetUserID(c)
 	if userID == "" {
@@ -258,16 +258,29 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 	var args []interface{}
 
 	if followerCount > 0 {
-		// Show logs from followed users
+		// Show list activity from followed users
 		query = `
-			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
-			       l.created_at, l.likes_count, l.comments_count,
-			       u.username, u.name, u.picture,
-			       b.title, b.authors, b.cover_url,
-			       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $1) as is_liked
-			FROM logs l
+			SELECT 
+				'list_created' as event_type,
+				l.id as entity_id,
+				l.user_id,
+				l.name as title,
+				l.description,
+				l.items_count,
+				l.likes_count,
+				l.comments_count,
+				l.header_image_url,
+				l.theme_color,
+				l.created_at,
+				u.username,
+				u.name as user_name,
+				u.picture,
+				NULL::text[] as book_ids,
+				NULL::text[] as book_titles,
+				NULL::text[] as book_covers,
+				EXISTS(SELECT 1 FROM list_likes WHERE list_id = l.id AND user_id = $1) as is_liked
+			FROM lists l
 			JOIN users u ON l.user_id = u.id
-			JOIN books b ON l.book_id = b.id
 			WHERE l.user_id IN (
 				SELECT following_id FROM followers WHERE follower_id = $1
 			)
@@ -277,19 +290,32 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 		`
 		args = []interface{}{userID}
 	} else {
-		// If no followers, show user's own logs to populate the feed
+		// If no followers, show popular public lists to bootstrap engagement
 		query = `
-			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
-			       l.created_at, l.likes_count, l.comments_count,
-			       u.username, u.name, u.picture,
-			       b.title, b.authors, b.cover_url,
-			       EXISTS(SELECT 1 FROM log_likes WHERE log_id = l.id AND user_id = $1) as is_liked
-			FROM logs l
+			SELECT 
+				'list_created' as event_type,
+				l.id as entity_id,
+				l.user_id,
+				l.name as title,
+				l.description,
+				l.items_count,
+				l.likes_count,
+				l.comments_count,
+				l.header_image_url,
+				l.theme_color,
+				l.created_at,
+				u.username,
+				u.name as user_name,
+				u.picture,
+				NULL::text[] as book_ids,
+				NULL::text[] as book_titles,
+				NULL::text[] as book_covers,
+				EXISTS(SELECT 1 FROM list_likes WHERE list_id = l.id AND user_id = $1) as is_liked
+			FROM lists l
 			JOIN users u ON l.user_id = u.id
-			JOIN books b ON l.book_id = b.id
-			WHERE l.user_id = $1
-			AND l.is_public = true
-			ORDER BY l.created_at DESC
+			WHERE l.is_public = true
+			AND l.items_count > 0
+			ORDER BY l.likes_count DESC, l.created_at DESC
 			LIMIT 50
 		`
 		args = []interface{}{userID}
@@ -306,55 +332,85 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 	feed := []map[string]interface{}{}
 	for rows.Next() {
 		var item struct {
-			LogID         string
-			UserID        string
-			BookID        string
-			Status        string
-			Rating        *int
-			Review        *string
-			CreatedAt     time.Time
-			LikesCount    int
-			CommentsCount int
-			Username      string
-			Name          string
-			Picture       *string
-			BookTitle     string
-			Authors       []string
-			CoverURL      *string
-			IsLiked       bool
+			EventType      string
+			EntityID       string
+			UserID         string
+			Title          string
+			Description    *string
+			ItemsCount     int
+			LikesCount     int
+			CommentsCount  int
+			HeaderImageURL *string
+			ThemeColor     *string
+			CreatedAt      time.Time
+			Username       string
+			UserName       string
+			Picture        *string
+			BookIDs        []string
+			BookTitles     []string
+			BookCovers     []string
+			IsLiked        bool
 		}
 
 		err := rows.Scan(
-			&item.LogID, &item.UserID, &item.BookID, &item.Status,
-			&item.Rating, &item.Review, &item.CreatedAt,
+			&item.EventType, &item.EntityID, &item.UserID,
+			&item.Title, &item.Description, &item.ItemsCount,
 			&item.LikesCount, &item.CommentsCount,
-			&item.Username, &item.Name, &item.Picture,
-			&item.BookTitle, &item.Authors, &item.CoverURL, &item.IsLiked,
+			&item.HeaderImageURL, &item.ThemeColor,
+			&item.CreatedAt, &item.Username, &item.UserName, &item.Picture,
+			&item.BookIDs, &item.BookTitles, &item.BookCovers,
+			&item.IsLiked,
 		)
 		if err != nil {
 			continue
 		}
 
+		// Fetch preview books for this list (top 3 covers)
+		previewBooks := []map[string]interface{}{}
+		if item.ItemsCount > 0 {
+			bookQuery := `
+				SELECT b.id, b.title, b.cover_url
+				FROM list_items li
+				JOIN books b ON li.book_id = b.id
+				WHERE li.list_id = $1
+				ORDER BY li.order_index
+				LIMIT 3
+			`
+			bookRows, err := h.DB.Query(ctx, bookQuery, item.EntityID)
+			if err == nil {
+				defer bookRows.Close()
+				for bookRows.Next() {
+					var bookID, bookTitle string
+					var bookCover *string
+					if err := bookRows.Scan(&bookID, &bookTitle, &bookCover); err == nil {
+						previewBooks = append(previewBooks, map[string]interface{}{
+							"id":        bookID,
+							"title":     bookTitle,
+							"cover_url": bookCover,
+						})
+					}
+				}
+			}
+		}
+
 		feed = append(feed, map[string]interface{}{
-			"id":             item.LogID,
-			"status":         item.Status,
-			"rating":         item.Rating,
-			"review":         item.Review,
-			"created_at":     item.CreatedAt,
-			"likes_count":    item.LikesCount,
-			"comments_count": item.CommentsCount,
-			"is_liked":       item.IsLiked,
+			"event_type":       item.EventType,
+			"id":               item.EntityID,
+			"title":            item.Title,
+			"description":      item.Description,
+			"items_count":      item.ItemsCount,
+			"likes_count":      item.LikesCount,
+			"comments_count":   item.CommentsCount,
+			"header_image_url": item.HeaderImageURL,
+			"theme_color":      item.ThemeColor,
+			"created_at":       item.CreatedAt,
+			"is_liked":         item.IsLiked,
+			"preview_books":    previewBooks,
 			"user": map[string]interface{}{
 				"id":       item.UserID,
 				"username": item.Username,
-				"name":     item.Name,
+				"name":     item.UserName,
 				"picture":  item.Picture,
-			},
-			"book": map[string]interface{}{
-				"id":        item.BookID,
-				"title":     item.BookTitle,
-				"authors":   item.Authors,
-				"cover_url": item.CoverURL,
 			},
 		})
 	}

@@ -23,7 +23,6 @@
                 <img v-if="bookDetails.cover_url" :src="bookDetails.cover_url" :alt="bookDetails.title"
                   class="w-48 h-72 object-cover rounded-lg shadow-lg" />
                 <div v-else class="w-48 h-72 bg-gray-200 rounded-lg flex items-center justify-center text-6xl">
-                  📚
                 </div>
               </div>
 
@@ -39,13 +38,13 @@
                 <!-- Metadata -->
                 <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
                   <div v-if="bookDetails.published_date">
-                    📅 {{ bookDetails.published_date }}
+                    {{ bookDetails.published_date }}
                   </div>
                   <div v-if="bookDetails.page_count">
-                    📖 {{ bookDetails.page_count }} pages
+                    {{ bookDetails.page_count }} pages
                   </div>
                   <div v-if="bookDetails.publisher">
-                    🏢 {{ bookDetails.publisher }}
+                    {{ bookDetails.publisher }}
                   </div>
                 </div>
 
@@ -74,10 +73,10 @@
                 <!-- Action Buttons -->
                 <div class="flex flex-wrap gap-3">
                   <PrimaryButton @click="$emit('log', bookDetails)">
-                    📝 Log This Book
+                    Log This Book
                   </PrimaryButton>
                   <OutlineButton @click="showAddToList = true">
-                    📚 Add to List
+                    Add to List
                   </OutlineButton>
                 </div>
               </div>

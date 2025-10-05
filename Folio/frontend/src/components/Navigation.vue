@@ -1,6 +1,6 @@
 <template>
     <!-- Header Navigation -->
-    <header class="glass-strong border-b border-dark-800 sticky top-0 z-50">
+    <header v-if="shouldShowNavigation" class="glass-strong border-b border-dark-800 sticky top-0 z-50">
         <div class="container-mobile max-w-7xl mx-auto">
             <div class="flex items-center justify-between py-4">
                 <!-- Logo -->
@@ -15,9 +15,11 @@
                 <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center gap-6">
                     <router-link to="/discover" class="btn-ghost">Discover</router-link>
-                    <router-link to="/feed" class="btn-ghost">Feed</router-link>
-                    <router-link to="/profile" class="btn-ghost">Profile</router-link>
-                    <button @click="authStore.logout()" class="btn-ghost">Logout</button>
+                    <router-link v-if="authStore.isAuthenticated" to="/feed" class="btn-ghost">Feed</router-link>
+                    <router-link v-if="authStore.isAuthenticated" to="/profile" class="btn-ghost">Profile</router-link>
+                    <router-link v-if="!authStore.isAuthenticated" to="/login" class="btn-primary">Login</router-link>
+                    <button v-if="authStore.isAuthenticated" @click="authStore.logout()"
+                        class="btn-ghost">Logout</button>
                 </nav>
 
                 <!-- Mobile Menu Button -->
@@ -32,7 +34,8 @@
     </header>
 
     <!-- Bottom Navigation (Mobile) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-strong border-t border-dark-800 z-40">
+    <nav v-if="shouldShowNavigation && authStore.isAuthenticated"
+        class="md:hidden fixed bottom-0 left-0 right-0 glass-strong border-t border-dark-800 z-40">
         <div class="flex items-center justify-around py-2">
             <router-link to="/" class="flex flex-col items-center gap-1 p-3 transition-colors"
                 :class="isActive('/') ? 'text-accent-red' : 'text-dark-400 hover:text-white'">
@@ -77,9 +80,17 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { computed } from 'vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
+
+// Routes where navigation should not be shown
+const noNavigationRoutes = ['/login', '/auth/callback']
+
+const shouldShowNavigation = computed(() => {
+    return !noNavigationRoutes.includes(route.path)
+})
 
 const isActive = (path) => {
     return route.path === path

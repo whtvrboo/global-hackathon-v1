@@ -86,7 +86,7 @@
                                 <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
                                     class="w-12 h-16 object-cover rounded" />
                                 <div v-else class="w-12 h-16 bg-dark-800 rounded flex items-center justify-center">
-                                    <span class="text-lg text-dark-400">📚</span>
+                                    <span class="text-lg text-dark-400"></span>
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="font-medium text-white text-sm line-clamp-1">{{ book.title }}</div>

@@ -14,6 +14,67 @@ type SocialHandler struct {
 	DB *pgxpool.Pool
 }
 
+// GetPopularUsers returns the top curators by list count
+func (h *SocialHandler) GetPopularUsers(c echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	currentUserID := auth.GetUserID(c)
+
+	query := `
+		SELECT u.id, u.username, u.name, u.picture, u.bio, COUNT(l.id) as list_count,
+		       EXISTS(SELECT 1 FROM followers WHERE follower_id = $1 AND following_id = u.id) as is_following
+		FROM users u
+		LEFT JOIN lists l ON u.id = l.user_id AND l.is_public = true
+		WHERE u.is_guest = false
+		GROUP BY u.id, u.username, u.name, u.picture, u.bio
+		HAVING COUNT(l.id) > 0
+		ORDER BY list_count DESC, u.created_at DESC
+		LIMIT 10
+	`
+
+	rows, err := h.DB.Query(ctx, query, currentUserID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch popular users",
+		})
+	}
+	defer rows.Close()
+
+	users := []map[string]interface{}{}
+	for rows.Next() {
+		var user struct {
+			ID          string
+			Username    string
+			Name        string
+			Picture     *string
+			Bio         *string
+			ListCount   int
+			IsFollowing bool
+		}
+
+		err := rows.Scan(&user.ID, &user.Username, &user.Name, &user.Picture, &user.Bio, &user.ListCount, &user.IsFollowing)
+		if err != nil {
+			continue
+		}
+
+		users = append(users, map[string]interface{}{
+			"id":           user.ID,
+			"username":     user.Username,
+			"name":         user.Name,
+			"picture":      user.Picture,
+			"bio":          user.Bio,
+			"list_count":   user.ListCount,
+			"is_following": user.IsFollowing,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"users": users,
+		"count": len(users),
+	})
+}
+
 // FollowUser creates a follow relationship
 func (h *SocialHandler) FollowUser(c echo.Context) error {
 	followerID := auth.GetUserID(c)

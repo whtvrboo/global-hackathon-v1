@@ -23,39 +23,74 @@
         </div>
 
         <!-- Lists Grid -->
-        <div v-else-if="lists.length > 0" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div v-for="list in lists" :key="list.id" class="card card-hover cursor-pointer" @click="viewList(list)">
-                <div class="flex items-start justify-between mb-3">
-                    <h4 class="text-heading-4 text-white">{{ list.name }}</h4>
-                    <div class="flex items-center gap-2">
-                        <span v-if="!list.is_public" class="text-xs text-dark-400 bg-dark-800 px-2 py-1 rounded">
-                            Private
-                        </span>
-                        <button @click.stop="editList(list)" class="text-dark-400 hover:text-white transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
-                                </path>
-                            </svg>
-                        </button>
-                        <button @click.stop="deleteList(list)"
-                            class="text-dark-400 hover:text-accent-red transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
+        <div v-else-if="lists.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div v-for="list in lists" :key="list.id" class="card card-hover cursor-pointer group overflow-hidden"
+                @click="viewList(list)">
+
+                <!-- List Header Image -->
+                <div v-if="list.header_image_url"
+                    class="aspect-video bg-gradient-to-br from-accent-blue/20 to-accent-purple/20 rounded-xl mb-4 overflow-hidden">
+                    <img :src="list.header_image_url" :alt="list.name"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                </div>
+                <div v-else class="aspect-video rounded-xl mb-4 flex items-center justify-center"
+                    :style="{ backgroundColor: list.theme_color || '#6366f1' }">
+                    <span class="text-4xl"></span>
                 </div>
 
-                <p v-if="list.description" class="text-body text-dark-300 mb-4 line-clamp-2">
-                    {{ list.description }}
-                </p>
+                <!-- List Info -->
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-3">
+                        <h4 class="text-heading-4 text-white line-clamp-2 flex-1">{{ list.name }}</h4>
+                        <div class="flex items-center gap-2 ml-2">
+                            <span v-if="!list.is_public" class="text-xs text-dark-400 bg-dark-800 px-2 py-1 rounded">
+                                Private
+                            </span>
+                            <button @click.stop="editList(list)"
+                                class="text-dark-400 hover:text-white transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <button @click.stop="deleteList(list)"
+                                class="text-dark-400 hover:text-accent-red transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
-                <div class="flex items-center justify-between text-sm text-dark-400">
-                    <span>{{ list.items_count || 0 }} book{{ (list.items_count || 0) !== 1 ? 's' : '' }}</span>
-                    <span>{{ formatDate(list.created_at) }}</span>
+                    <p v-if="list.description" class="text-body text-dark-300 mb-4 line-clamp-2">
+                        {{ list.description }}
+                    </p>
+
+                    <!-- Book Covers Collage -->
+                    <div v-if="list.items_count > 0" class="mb-4">
+                        <div class="flex -space-x-2">
+                            <div v-for="(item, index) in getFirstFourBooks(list)" :key="item.id" class="relative">
+                                <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
+                                    class="w-12 h-16 object-cover rounded-lg border-2 border-dark-800 shadow-lg" />
+                                <div v-else
+                                    class="w-12 h-16 bg-dark-800 rounded-lg border-2 border-dark-800 flex items-center justify-center">
+                                    <span class="text-xs text-dark-400"></span>
+                                </div>
+                                <div v-if="index === 3 && list.items_count > 4"
+                                    class="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                    <span class="text-xs text-white font-bold">+{{ list.items_count - 4 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-sm text-dark-400">
+                        <span>{{ list.items_count || 0 }} book{{ (list.items_count || 0) !== 1 ? 's' : '' }}</span>
+                        <span>{{ formatDate(list.created_at) }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -89,46 +124,75 @@
                             {{ selectedList.description }}
                         </p>
                     </div>
-                    <button @click="selectedList = null" class="text-dark-400 hover:text-white transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- List Items -->
-                <div v-if="selectedList.items?.length > 0" class="space-y-4">
-                    <div v-for="item in selectedList.items" :key="item.id"
-                        class="flex gap-4 p-4 bg-dark-800 rounded-xl">
-                        <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
-                            class="w-16 h-24 object-cover rounded-lg" />
-                        <div v-else class="w-16 h-24 bg-dark-700 rounded-lg flex items-center justify-center">
-                            <span class="text-2xl text-dark-400">📚</span>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="text-heading-4 text-white mb-1">{{ item.book.title }}</h4>
-                            <p v-if="item.book.authors" class="text-body text-dark-300 mb-2">
-                                by {{ item.book.authors.join(', ') }}
-                            </p>
-                            <p v-if="item.notes" class="text-sm text-dark-400 italic">
-                                "{{ item.notes }}"
-                            </p>
-                        </div>
-                        <button @click="removeFromList(item.id)"
-                            class="text-dark-400 hover:text-accent-red transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex items-center gap-4">
+                        <button @click="viewPublicList" class="btn-outline text-sm">
+                            View Public Page
+                        </button>
+                        <button @click="selectedList = null" class="text-dark-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                </path>
+                                    d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
                         </button>
                     </div>
                 </div>
 
+                <!-- List Items with Drag and Drop -->
+                <div v-if="selectedList.items?.length > 0" class="space-y-4">
+                    <draggable v-model="selectedList.items" @end="onDragEnd" :animation="200" ghost-class="ghost"
+                        chosen-class="chosen" drag-class="drag">
+                        <div v-for="(item, index) in selectedList.items" :key="item.id"
+                            class="flex gap-4 p-4 bg-dark-800 rounded-xl cursor-move hover:bg-dark-700 transition-colors">
+
+                            <!-- Drag Handle -->
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-dark-400 hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8h16M4 16h16"></path>
+                                </svg>
+                            </div>
+
+                            <!-- Number -->
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm bg-accent-blue">
+                                {{ index + 1 }}
+                            </div>
+
+                            <!-- Book Cover -->
+                            <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
+                                class="w-16 h-24 object-cover rounded-lg" />
+                            <div v-else class="w-16 h-24 bg-dark-700 rounded-lg flex items-center justify-center">
+                                <span class="text-2xl text-dark-400"></span>
+                            </div>
+
+                            <!-- Book Info -->
+                            <div class="flex-1">
+                                <h4 class="text-heading-4 text-white mb-1">{{ item.book.title }}</h4>
+                                <p v-if="item.book.authors" class="text-body text-dark-300 mb-2">
+                                    by {{ item.book.authors.join(', ') }}
+                                </p>
+                                <p v-if="item.notes" class="text-sm text-dark-400 italic">
+                                    "{{ item.notes }}"
+                                </p>
+                            </div>
+
+                            <!-- Remove Button -->
+                            <button @click="removeFromList(item.id)"
+                                class="text-dark-400 hover:text-accent-red transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </draggable>
+                </div>
+
                 <!-- Empty List -->
                 <div v-else class="text-center py-12">
-                    <div class="text-6xl mb-4">📖</div>
+                    <div class="text-6xl mb-4"></div>
                     <h4 class="text-heading-4 mb-2">No books in this list</h4>
                     <p class="text-body text-dark-300">
                         Add books to this list from the book details page
@@ -145,10 +209,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
+import draggable from 'vuedraggable'
 import ListModal from './ListModal.vue'
 import { useToastStore } from '../stores/toast'
 
+const router = useRouter()
 const lists = ref([])
 const loading = ref(true)
 const selectedList = ref(null)
@@ -235,7 +302,52 @@ const handleListSuccess = () => {
     closeModals()
 }
 
+const getFirstFourBooks = (list) => {
+    // This would need to be populated from the backend
+    // For now, return empty array
+    return []
+}
+
+const onDragEnd = async (event) => {
+    if (event.oldIndex === event.newIndex) return
+
+    try {
+        const itemIds = selectedList.value.items.map(item => item.id)
+        await axios.put(`/api/lists/${selectedList.value.id}/items/order`, {
+            item_ids: itemIds
+        })
+        toastStore.success('List order updated!')
+    } catch (error) {
+        console.error('Error updating list order:', error)
+        toastStore.error('Failed to update list order')
+        // Reload the list to restore original order
+        await viewList(selectedList.value)
+    }
+}
+
+const viewPublicList = () => {
+    if (selectedList.value) {
+        router.push(`/lists/${selectedList.value.id}`)
+        selectedList.value = null
+    }
+}
+
 onMounted(() => {
     loadLists()
 })
 </script>
+
+<style scoped>
+.ghost {
+    opacity: 0.5;
+    background: #374151;
+}
+
+.chosen {
+    background: #4B5563;
+}
+
+.drag {
+    background: #6B7280;
+}
+</style>

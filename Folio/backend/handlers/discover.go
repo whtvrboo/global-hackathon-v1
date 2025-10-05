@@ -759,12 +759,12 @@ func (h *DiscoverHandler) getTrendingBooks(limit int) []map[string]interface{} {
 
 	// Get popular books from our local database
 	query := `
-		SELECT b.id, b.title, b.author, b.description, b.cover_url, b.published_date, b.pages, b.categories,
+		SELECT b.id, b.title, b.authors, b.description, b.cover_url, b.published_date, b.page_count, b.categories,
 		       COUNT(l.id) as log_count,
 		       AVG(l.rating) as avg_rating
 		FROM books b
 		LEFT JOIN logs l ON b.id = l.book_id AND l.status = 'read'
-		GROUP BY b.id, b.title, b.author, b.description, b.cover_url, b.published_date, b.pages, b.categories
+		GROUP BY b.id, b.title, b.authors, b.description, b.cover_url, b.published_date, b.page_count, b.categories
 		HAVING COUNT(l.id) > 0
 		ORDER BY log_count DESC, avg_rating DESC
 		LIMIT $1
@@ -782,29 +782,23 @@ func (h *DiscoverHandler) getTrendingBooks(limit int) []map[string]interface{} {
 		var book struct {
 			ID            string
 			Title         string
-			Author        string
+			Authors       []string
 			Description   string
 			CoverURL      string
 			PublishedDate string
-			Pages         int
-			Categories    string
+			PageCount     int
+			Categories    []string
 			LogCount      int
 			AvgRating     *float64
 		}
 
 		err := rows.Scan(
-			&book.ID, &book.Title, &book.Author, &book.Description,
-			&book.CoverURL, &book.PublishedDate, &book.Pages, &book.Categories,
+			&book.ID, &book.Title, &book.Authors, &book.Description,
+			&book.CoverURL, &book.PublishedDate, &book.PageCount, &book.Categories,
 			&book.LogCount, &book.AvgRating,
 		)
 		if err != nil {
 			continue
-		}
-
-		// Parse categories
-		var categories []string
-		if book.Categories != "" {
-			json.Unmarshal([]byte(book.Categories), &categories)
 		}
 
 		rating := 0.0
@@ -815,12 +809,12 @@ func (h *DiscoverHandler) getTrendingBooks(limit int) []map[string]interface{} {
 		books = append(books, map[string]interface{}{
 			"id":            book.ID,
 			"title":         book.Title,
-			"authors":       []string{book.Author},
+			"authors":       book.Authors,
 			"description":   book.Description,
 			"cover_url":     book.CoverURL,
 			"published_date": book.PublishedDate,
-			"pages":         book.Pages,
-			"categories":    categories,
+			"page_count":    book.PageCount,
+			"categories":    book.Categories,
 			"rating":        rating,
 			"log_count":     book.LogCount,
 		})
@@ -837,7 +831,7 @@ func (h *DiscoverHandler) getTrendingBooks(limit int) []map[string]interface{} {
 // getRandomBooks returns random books from our database
 func (h *DiscoverHandler) getRandomBooks(ctx context.Context, limit int) []map[string]interface{} {
 	query := `
-		SELECT id, title, author, description, cover_url, published_date, pages, categories
+		SELECT id, title, authors, description, cover_url, published_date, page_count, categories
 		FROM books
 		ORDER BY RANDOM()
 		LIMIT $1
@@ -854,37 +848,31 @@ func (h *DiscoverHandler) getRandomBooks(ctx context.Context, limit int) []map[s
 		var book struct {
 			ID            string
 			Title         string
-			Author        string
+			Authors       []string
 			Description   string
 			CoverURL      string
 			PublishedDate string
-			Pages         int
-			Categories    string
+			PageCount     int
+			Categories    []string
 		}
 
 		err := rows.Scan(
-			&book.ID, &book.Title, &book.Author, &book.Description,
-			&book.CoverURL, &book.PublishedDate, &book.Pages, &book.Categories,
+			&book.ID, &book.Title, &book.Authors, &book.Description,
+			&book.CoverURL, &book.PublishedDate, &book.PageCount, &book.Categories,
 		)
 		if err != nil {
 			continue
 		}
 
-		// Parse categories
-		var categories []string
-		if book.Categories != "" {
-			json.Unmarshal([]byte(book.Categories), &categories)
-		}
-
 		books = append(books, map[string]interface{}{
 			"id":            book.ID,
 			"title":         book.Title,
-			"authors":       []string{book.Author},
+			"authors":       book.Authors,
 			"description":   book.Description,
 			"cover_url":     book.CoverURL,
 			"published_date": book.PublishedDate,
-			"pages":         book.Pages,
-			"categories":    categories,
+			"page_count":    book.PageCount,
+			"categories":    book.Categories,
 			"rating":        0.0,
 		})
 	}

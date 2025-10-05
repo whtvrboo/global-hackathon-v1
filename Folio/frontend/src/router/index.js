@@ -5,6 +5,7 @@ import AuthCallback from '../views/AuthCallback.vue'
 import ProfileView from '../views/ProfileView.vue'
 import FeedView from '../views/FeedView.vue'
 import DiscoverView from '../views/DiscoverView.vue'
+import ListDetailView from '../views/ListDetailView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -13,7 +14,8 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView
+      component: HomeView,
+      meta: { public: true }
     },
     {
       path: '/profile',
@@ -28,7 +30,14 @@ const router = createRouter({
     {
       path: '/discover',
       name: 'discover',
-      component: DiscoverView
+      component: DiscoverView,
+      meta: { public: true }
+    },
+    {
+      path: '/lists/:id',
+      name: 'list-detail',
+      component: ListDetailView,
+      meta: { public: true }
     },
     {
       path: '/login',
