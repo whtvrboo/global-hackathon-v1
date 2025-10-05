@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Folio - Your Reading Journal',
+        name: 'Folio - Discover Books Through the People Who Read Them',
         short_name: 'Folio',
         description: 'Track your reading journey with Folio - a beautiful reading journal app',
         theme_color: '#1f2937',

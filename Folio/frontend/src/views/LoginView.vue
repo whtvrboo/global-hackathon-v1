@@ -7,7 +7,7 @@
           <span class="text-3xl"></span>
         </div>
         <h1 class="text-display-2 mb-4 text-gradient">Welcome to Folio</h1>
-        <p class="text-body text-dark-300">Your personal reading journal</p>
+        <p class="text-body text-dark-300">Discover Books Through the People Who Read Them</p>
       </div>
 
       <div class="space-y-6">
