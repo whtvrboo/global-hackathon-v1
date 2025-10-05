@@ -6,6 +6,7 @@ import ProfileView from '../views/ProfileView.vue'
 import FeedView from '../views/FeedView.vue'
 import DiscoverView from '../views/DiscoverView.vue'
 import ListDetailView from '../views/ListDetailView.vue'
+import BookDetailView from '../views/BookDetailView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -38,6 +39,12 @@ const router = createRouter({
       path: '/lists/:id',
       name: 'list-detail',
       component: ListDetailView,
+      meta: { public: true }
+    },
+    {
+      path: '/books/:id',
+      name: 'book-detail',
+      component: BookDetailView,
       meta: { public: true }
     },
     {

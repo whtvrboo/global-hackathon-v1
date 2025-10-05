@@ -10,13 +10,17 @@
                 <!-- Header with Book Info -->
                 <div class="sticky top-0 glass-strong border-b border-dark-700 p-6 z-10">
                     <div class="flex items-start gap-6">
-                        <img v-if="log.book.cover_url" :src="log.book.cover_url" :alt="log.book.title"
-                            class="w-24 h-36 object-cover rounded-xl shadow-xl" />
-                        <div v-else class="w-24 h-36 bg-dark-800 rounded-xl flex items-center justify-center">
-                            <span class="text-4xl text-dark-400"></span>
+                        <div class="cursor-pointer" @click="navigateToBook(log.book.id)">
+                            <img v-if="log.book.cover_url" :src="log.book.cover_url" :alt="log.book.title"
+                                class="w-24 h-36 object-cover rounded-xl shadow-xl hover:shadow-2xl transition-shadow" />
+                            <div v-else
+                                class="w-24 h-36 bg-dark-800 rounded-xl flex items-center justify-center hover:bg-dark-700 transition-colors">
+                                <span class="text-4xl text-dark-400"></span>
+                            </div>
                         </div>
                         <div class="flex-1">
-                            <h2 class="text-heading-2 mb-2">{{ log.book.title }}</h2>
+                            <h2 class="text-heading-2 mb-2 cursor-pointer hover:text-primary transition-colors"
+                                @click="navigateToBook(log.book.id)">{{ log.book.title }}</h2>
                             <p v-if="log.book.authors" class="text-body text-dark-300 mb-3">
                                 by {{ log.book.authors.join(', ') }}
                             </p>
@@ -182,6 +186,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import TextArea from './ui/TextArea.vue'
@@ -193,6 +198,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated'])
 
+const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToastStore()
 
@@ -331,6 +337,11 @@ function formatDate(dateString) {
     if (!dateString) return ''
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+const navigateToBook = (bookId) => {
+    router.push(`/books/${bookId}`)
+    emit('close') // Close the modal when navigating
 }
 
 function timeAgo(dateString) {

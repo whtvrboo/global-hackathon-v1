@@ -101,6 +101,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	discoverHandler := &handlers.DiscoverHandler{DB: app.DB}
 	guestHandler := &handlers.GuestHandler{DB: app.DB}
 	listHandler := &handlers.ListHandler{DB: app.DB}
+	annotationHandler := &handlers.AnnotationHandler{DB: app.DB}
 
 	// API routes
 	api := e.Group("/api")
@@ -115,6 +116,9 @@ func setupRoutes(e *echo.Echo, app *App) {
 	api.POST("/auth/guest", guestHandler.CreateGuestUser)
 	api.GET("/search", bookHandler.SearchBooks)
 	api.GET("/books/:id", bookHandler.GetBook)
+	api.GET("/books/:id/reviews", bookHandler.GetBookReviews)
+	api.GET("/books/:id/stats", bookHandler.GetBookStats)
+	api.GET("/books/:id/lists", bookHandler.GetBookLists)
 	api.GET("/discover", discoverHandler.GetRecommendations)
 	api.GET("/discover/lists", discoverHandler.GetTrendingLists)
 	api.GET("/lists/popular", listHandler.GetPopularLists)
@@ -158,6 +162,15 @@ func setupRoutes(e *echo.Echo, app *App) {
 	protected.DELETE("/lists/:id/like", listHandler.UnlikeList)
 	protected.GET("/lists/:id/comments", listHandler.GetListComments)
 	protected.POST("/lists/:id/comments", listHandler.AddListComment)
+	
+	// Annotation endpoints
+	protected.POST("/annotations/capture", annotationHandler.CaptureAnnotation)
+	protected.GET("/users/me/recents", annotationHandler.GetUserRecents)
+	protected.GET("/books/:id/annotations", annotationHandler.GetBookAnnotations)
+	protected.GET("/annotations/unassociated", annotationHandler.GetUnassociatedAnnotations)
+	protected.PATCH("/annotations/:id", annotationHandler.UpdateAnnotation)
+	protected.DELETE("/annotations/:id", annotationHandler.DeleteAnnotation)
+	protected.GET("/annotations/search", annotationHandler.SearchAnnotations)
 }
 
 // healthCheck performs a database query and returns system status

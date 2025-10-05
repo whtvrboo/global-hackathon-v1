@@ -72,11 +72,12 @@
                     <!-- Book Covers Collage -->
                     <div v-if="list.items_count > 0" class="mb-4">
                         <div class="flex -space-x-2">
-                            <div v-for="(item, index) in getFirstFourBooks(list)" :key="item.id" class="relative">
+                            <div v-for="(item, index) in getFirstFourBooks(list)" :key="item.id"
+                                class="relative cursor-pointer" @click.stop="navigateToBook(item.book.id)">
                                 <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
-                                    class="w-12 h-16 object-cover rounded-lg border-2 border-dark-800 shadow-lg" />
+                                    class="w-12 h-16 object-cover rounded-lg border-2 border-dark-800 shadow-lg hover:shadow-xl transition-shadow" />
                                 <div v-else
-                                    class="w-12 h-16 bg-dark-800 rounded-lg border-2 border-dark-800 flex items-center justify-center">
+                                    class="w-12 h-16 bg-dark-800 rounded-lg border-2 border-dark-800 flex items-center justify-center hover:bg-dark-700 transition-colors">
                                     <span class="text-xs text-dark-400"></span>
                                 </div>
                                 <div v-if="index === 3 && list.items_count > 4"
@@ -160,15 +161,19 @@
                             </div>
 
                             <!-- Book Cover -->
-                            <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
-                                class="w-16 h-24 object-cover rounded-lg" />
-                            <div v-else class="w-16 h-24 bg-dark-700 rounded-lg flex items-center justify-center">
-                                <span class="text-2xl text-dark-400"></span>
+                            <div class="cursor-pointer" @click.stop="navigateToBook(item.book.id)">
+                                <img v-if="item.book.cover_url" :src="item.book.cover_url" :alt="item.book.title"
+                                    class="w-16 h-24 object-cover rounded-lg hover:shadow-lg transition-shadow" />
+                                <div v-else
+                                    class="w-16 h-24 bg-dark-700 rounded-lg flex items-center justify-center hover:bg-dark-600 transition-colors">
+                                    <span class="text-2xl text-dark-400"></span>
+                                </div>
                             </div>
 
                             <!-- Book Info -->
                             <div class="flex-1">
-                                <h4 class="text-heading-4 text-white mb-1">{{ item.book.title }}</h4>
+                                <h4 class="text-heading-4 text-white mb-1 cursor-pointer hover:text-primary transition-colors"
+                                    @click.stop="navigateToBook(item.book.id)">{{ item.book.title }}</h4>
                                 <p v-if="item.book.authors" class="text-body text-dark-300 mb-2">
                                     by {{ item.book.authors.join(', ') }}
                                 </p>
@@ -388,6 +393,10 @@ const viewPublicList = () => {
         router.push(`/lists/${selectedList.value.id}`)
         selectedList.value = null
     }
+}
+
+const navigateToBook = (bookId) => {
+    router.push(`/books/${bookId}`)
 }
 
 onMounted(() => {

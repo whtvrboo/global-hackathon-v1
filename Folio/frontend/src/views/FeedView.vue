@@ -72,10 +72,12 @@
                     <!-- Preview Books -->
                     <div v-if="item.preview_books && item.preview_books.length > 0" class="mb-6">
                         <div class="flex gap-3 overflow-x-auto pb-2">
-                            <div v-for="book in item.preview_books" :key="book.id" class="flex-shrink-0">
+                            <div v-for="book in item.preview_books" :key="book.id" class="flex-shrink-0 cursor-pointer"
+                                @click="navigateToBook(book.id)">
                                 <img v-if="book.cover_url" :src="book.cover_url" :alt="book.title"
-                                    class="w-20 h-28 object-cover rounded-lg shadow-md" />
-                                <div v-else class="w-20 h-28 bg-dark-800 rounded-lg flex items-center justify-center">
+                                    class="w-20 h-28 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow" />
+                                <div v-else
+                                    class="w-20 h-28 bg-dark-800 rounded-lg flex items-center justify-center hover:bg-dark-700 transition-colors">
                                     <span class="text-xl text-dark-400"></span>
                                 </div>
                             </div>
@@ -89,7 +91,7 @@
                     <!-- List Stats -->
                     <div class="flex items-center justify-between text-sm text-dark-400 pt-4 border-t border-dark-800">
                         <span class="font-medium">{{ item.items_count }} book{{ item.items_count !== 1 ? 's' : ''
-                            }}</span>
+                        }}</span>
                         <div class="flex items-center gap-4">
                             <button @click.stop="toggleLike(item.id)" class="flex items-center gap-1 transition-colors"
                                 :class="item.is_liked ? 'text-accent-red' : 'text-dark-400 hover:text-accent-red'">
@@ -195,10 +197,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 import { useToastStore } from '../stores/toast'
 
+const router = useRouter()
 const authStore = useAuthStore()
 
 const feed = ref([])
@@ -207,6 +211,10 @@ const popularUsers = ref([])
 const loadingPopularUsers = ref(false)
 const followingUsers = ref({})
 const toastStore = useToastStore()
+
+const navigateToBook = (bookId) => {
+    router.push(`/books/${bookId}`)
+}
 
 const timeAgo = (date) => {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000)

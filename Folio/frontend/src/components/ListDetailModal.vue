@@ -168,6 +168,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import TextArea from './ui/TextArea.vue'
@@ -179,6 +180,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated', 'openBook'])
 
+const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToastStore()
 
@@ -297,7 +299,8 @@ watch(() => showComments.value, (newVal) => {
 })
 
 function openBook(book) {
-    emit('openBook', book)
+    router.push(`/books/${book.id}`)
+    emit('close') // Close the modal when navigating
 }
 
 function timeAgo(dateString) {

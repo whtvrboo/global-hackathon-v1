@@ -9,11 +9,11 @@
           enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
           leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
           <div v-if="show" @click.stop
-            class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            class="bg-dark-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <!-- Loading State -->
             <div v-if="loading" class="p-12 text-center">
-              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              <p class="mt-4 text-gray-600">Loading book details...</p>
+              <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red"></div>
+              <p class="mt-4 text-dark-300">Loading book details...</p>
             </div>
 
             <!-- Book Details -->
@@ -23,21 +23,21 @@
                 <div class="flex-shrink-0">
                   <img v-if="bookDetails.cover_url" :src="bookDetails.cover_url" :alt="bookDetails.title"
                     class="w-48 h-72 object-cover rounded-lg shadow-lg" />
-                  <div v-else class="w-48 h-72 bg-gray-200 rounded-lg flex items-center justify-center text-6xl">
+                  <div v-else class="w-48 h-72 bg-dark-800 rounded-lg flex items-center justify-center text-6xl">
                   </div>
                 </div>
 
                 <!-- Book Info -->
                 <div class="flex-1 min-w-0">
-                  <h2 class="text-3xl font-bold text-gray-900 mb-2">
+                  <h2 class="text-3xl font-bold text-white mb-2">
                     {{ bookDetails.title }}
                   </h2>
-                  <p v-if="bookDetails.authors?.length" class="text-lg text-gray-600 mb-4">
+                  <p v-if="bookDetails.authors?.length" class="text-lg text-dark-300 mb-4">
                     by {{ bookDetails.authors.join(', ') }}
                   </p>
 
                   <!-- Metadata -->
-                  <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
+                  <div class="flex flex-wrap gap-4 text-sm text-dark-300 mb-6">
                     <div v-if="bookDetails.published_date">
                       {{ bookDetails.published_date }}
                     </div>
@@ -53,12 +53,12 @@
                   <div v-if="bookDetails.rating" class="flex items-center gap-2 mb-6">
                     <div class="flex">
                       <span v-for="i in 5" :key="i" class="text-2xl"
-                        :class="i <= Math.round(bookDetails.rating) ? 'text-yellow-500' : 'text-gray-300'">
+                        :class="i <= Math.round(bookDetails.rating) ? 'text-accent-orange' : 'text-dark-400'">
                         ★
                       </span>
                     </div>
                     <span class="text-lg font-semibold">{{ bookDetails.rating }}</span>
-                    <span v-if="bookDetails.ratings_count" class="text-sm text-gray-500">
+                    <span v-if="bookDetails.ratings_count" class="text-sm text-dark-400">
                       ({{ bookDetails.ratings_count }} ratings)
                     </span>
                   </div>
@@ -66,18 +66,18 @@
                   <!-- Categories -->
                   <div v-if="bookDetails.categories?.length" class="flex flex-wrap gap-2 mb-6">
                     <span v-for="category in bookDetails.categories" :key="category"
-                      class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full">
+                      class="px-3 py-1 text-sm bg-dark-800 text-dark-200 rounded-full">
                       {{ category }}
                     </span>
                   </div>
 
                   <!-- Action Buttons -->
                   <div class="flex flex-wrap gap-3">
-                    <PrimaryButton @click="$emit('log', bookDetails)">
-                      Log This Book
+                    <PrimaryButton @click="navigateToDetail">
+                      View Details
                     </PrimaryButton>
-                    <OutlineButton @click="showAddToList = true">
-                      Add to List
+                    <OutlineButton @click="$emit('log', bookDetails)">
+                      Log This Book
                     </OutlineButton>
                   </div>
                 </div>
@@ -86,15 +86,15 @@
               <!-- Description -->
               <div v-if="bookDetails.description" class="mt-6">
                 <h3 class="text-lg font-semibold mb-3">Description</h3>
-                <p class="text-gray-700 leading-relaxed whitespace-pre-line">
+                <p class="text-dark-200 leading-relaxed whitespace-pre-line">
                   {{ bookDetails.description }}
                 </p>
               </div>
 
               <!-- ISBN -->
               <div v-if="bookDetails.isbn_10 || bookDetails.isbn_13" class="mt-6 pt-6 border-t">
-                <h3 class="text-sm font-semibold text-gray-500 mb-2">ISBNS</h3>
-                <div class="flex gap-4 text-sm text-gray-600">
+                <h3 class="text-sm font-semibold text-dark-400 mb-2">ISBNS</h3>
+                <div class="flex gap-4 text-sm text-dark-300">
                   <div v-if="bookDetails.isbn_10">ISBN-10: {{ bookDetails.isbn_10 }}</div>
                   <div v-if="bookDetails.isbn_13">ISBN-13: {{ bookDetails.isbn_13 }}</div>
                 </div>
@@ -104,7 +104,7 @@
             <!-- Error State -->
             <div v-else-if="error" class="p-12 text-center">
               <div class="text-4xl mb-4">😕</div>
-              <p class="text-gray-600">{{ error }}</p>
+              <p class="text-dark-300">{{ error }}</p>
               <SecondaryButton @click="$emit('close')" class="mt-4">
                 Close
               </SecondaryButton>
@@ -112,7 +112,7 @@
 
             <!-- Close Button -->
             <button @click="$emit('close')"
-              class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              class="absolute top-4 right-4 p-2 text-dark-400 hover:text-dark-300 hover:bg-dark-800 rounded-full transition-colors">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -138,7 +138,7 @@
           <div v-if="selectedListForNotes">
             <p class="text-sm text-dark-300 mb-4">
               You're adding <strong>{{ bookDetails.title }}</strong> to <strong>{{ selectedListForNotes.name
-                }}</strong>.
+              }}</strong>.
             </p>
             <TextArea v-model="curatorNotes" placeholder="Why is this book on the list? What does it mean to you?"
               :rows="5" />
@@ -151,7 +151,7 @@
           <!-- View for selecting a list -->
           <div v-else>
             <div v-if="loadingLists" class="text-center py-4">
-              <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-accent-red"></div>
               <p class="mt-2 text-sm text-dark-400">Loading lists...</p>
             </div>
 
@@ -198,6 +198,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import PrimaryButton from './ui/PrimaryButton.vue'
 import OutlineButton from './ui/OutlineButton.vue'
@@ -213,6 +214,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'log'])
 
+const router = useRouter()
 const bookDetails = ref(null)
 const loading = ref(false)
 const error = ref(null)
@@ -302,5 +304,10 @@ const closeAddToListModal = () => {
   showAddToList.value = false
   selectedListForNotes.value = null
   curatorNotes.value = ''
+}
+
+const navigateToDetail = () => {
+  router.push(`/books/${props.bookId}`)
+  emit('close')
 }
 </script>

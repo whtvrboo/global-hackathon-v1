@@ -368,7 +368,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Card from '../components/ui/Card.vue'
 import BookCard from '../components/BookCard.vue'
@@ -379,6 +379,7 @@ import { useToastStore } from '../stores/toast'
 
 const authStore = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 const toastStore = useToastStore()
 
 const user = ref(null)
@@ -608,8 +609,7 @@ const toggleFollow = async () => {
 }
 
 const showBookDetail = (book) => {
-  selectedBook.value = book
-  // showBookDetailModal.value = true // BookDetailModal may not exist yet
+  router.push(`/books/${book.id}`)
 }
 
 const refreshProfile = async () => {

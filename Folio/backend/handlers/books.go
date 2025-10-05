@@ -351,3 +351,206 @@ func (h *BookHandler) cacheBook(ctx context.Context, bookData map[string]interfa
 	return err
 }
 
+// GetBookReviews gets public reviews for a book
+func (h *BookHandler) GetBookReviews(c echo.Context) error {
+	bookID := c.Param("id")
+	if bookID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "book ID is required",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT l.id, l.user_id, l.status, l.rating, l.review, l.notes, l.created_at, l.updated_at,
+		       u.username, u.name, u.picture
+		FROM logs l
+		JOIN users u ON l.user_id = u.id
+		WHERE l.book_id = $1 AND l.is_public = true
+		ORDER BY l.created_at DESC
+		LIMIT 50
+	`
+
+	rows, err := h.DB.Query(ctx, query, bookID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch reviews",
+		})
+	}
+	defer rows.Close()
+
+	reviews := []map[string]interface{}{}
+	for rows.Next() {
+		var review struct {
+			ID        string
+			UserID    string
+			Status    string
+			Rating    *int
+			Review    *string
+			Notes     *string
+			CreatedAt time.Time
+			UpdatedAt time.Time
+			Username  string
+			Name      string
+			Picture   *string
+		}
+
+		err := rows.Scan(
+			&review.ID, &review.UserID, &review.Status, &review.Rating,
+			&review.Review, &review.Notes, &review.CreatedAt, &review.UpdatedAt,
+			&review.Username, &review.Name, &review.Picture,
+		)
+		if err != nil {
+			continue
+		}
+
+		reviews = append(reviews, map[string]interface{}{
+			"id":         review.ID,
+			"status":     review.Status,
+			"rating":     review.Rating,
+			"review":     review.Review,
+			"notes":      review.Notes,
+			"created_at": review.CreatedAt,
+			"updated_at": review.UpdatedAt,
+			"user": map[string]interface{}{
+				"id":       review.UserID,
+				"username": review.Username,
+				"name":     review.Name,
+				"picture":  review.Picture,
+			},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"reviews": reviews,
+		"count":   len(reviews),
+	})
+}
+
+// GetBookStats gets community statistics for a book
+func (h *BookHandler) GetBookStats(c echo.Context) error {
+	bookID := c.Param("id")
+	if bookID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "book ID is required",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT 
+			COUNT(CASE WHEN status = 'want_to_read' THEN 1 END) as want_to_read,
+			COUNT(CASE WHEN status = 'reading' THEN 1 END) as reading,
+			COUNT(CASE WHEN status = 'read' THEN 1 END) as read,
+			COUNT(CASE WHEN status = 'dnf' THEN 1 END) as dnf,
+			AVG(CASE WHEN rating IS NOT NULL THEN rating END) as avg_rating,
+			COUNT(CASE WHEN rating IS NOT NULL THEN 1 END) as rating_count
+		FROM logs
+		WHERE book_id = $1 AND is_public = true
+	`
+
+	var stats struct {
+		WantToRead  int
+		Reading     int
+		Read        int
+		DNF         int
+		AvgRating   *float64
+		RatingCount int
+	}
+
+	err := h.DB.QueryRow(ctx, query, bookID).Scan(
+		&stats.WantToRead, &stats.Reading, &stats.Read, &stats.DNF,
+		&stats.AvgRating, &stats.RatingCount,
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch book stats",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"want_to_read": stats.WantToRead,
+		"reading":      stats.Reading,
+		"read":         stats.Read,
+		"dnf":          stats.DNF,
+		"avg_rating":   stats.AvgRating,
+		"rating_count": stats.RatingCount,
+	})
+}
+
+// GetBookLists gets lists that contain this book
+func (h *BookHandler) GetBookLists(c echo.Context) error {
+	bookID := c.Param("id")
+	if bookID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "book ID is required",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT l.id, l.name, l.description, l.is_public, l.theme_color, l.items_count,
+		       u.username, u.name as creator_name
+		FROM lists l
+		JOIN list_items li ON l.id = li.list_id
+		JOIN users u ON l.user_id = u.id
+		WHERE li.book_id = $1 AND l.is_public = true
+		ORDER BY l.created_at DESC
+		LIMIT 10
+	`
+
+	rows, err := h.DB.Query(ctx, query, bookID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch lists",
+		})
+	}
+	defer rows.Close()
+
+	lists := []map[string]interface{}{}
+	for rows.Next() {
+		var list struct {
+			ID          string
+			Name        string
+			Description *string
+			IsPublic    bool
+			ThemeColor  string
+			ItemsCount  int
+			Username    string
+			CreatorName string
+		}
+
+		err := rows.Scan(
+			&list.ID, &list.Name, &list.Description, &list.IsPublic,
+			&list.ThemeColor, &list.ItemsCount, &list.Username, &list.CreatorName,
+		)
+		if err != nil {
+			continue
+		}
+
+		lists = append(lists, map[string]interface{}{
+			"id":          list.ID,
+			"name":        list.Name,
+			"description": list.Description,
+			"is_public":   list.IsPublic,
+			"theme_color": list.ThemeColor,
+			"items_count": list.ItemsCount,
+			"creator": map[string]interface{}{
+				"username": list.Username,
+				"name":     list.CreatorName,
+			},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"lists": lists,
+		"count": len(lists),
+	})
+}
+

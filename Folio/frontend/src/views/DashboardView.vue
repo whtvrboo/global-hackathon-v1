@@ -399,6 +399,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 import SearchBar from '../components/SearchBar.vue'
@@ -407,6 +408,7 @@ import BookDetailModal from '../components/BookDetailModal.vue'
 import LogBookModal from '../components/LogBookModal.vue'
 import GuestConversionModal from '../components/GuestConversionModal.vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
 
 const selectedBookId = ref(null)
@@ -421,8 +423,7 @@ const discoveryBooks = ref([])
 const personalizedRecommendations = ref([])
 
 const handleBookSelect = (book) => {
-  selectedBookId.value = book.id
-  showBookDetail.value = true
+  router.push(`/books/${book.id}`)
 }
 
 const handleLogBook = (book) => {

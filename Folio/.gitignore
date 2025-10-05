@@ -38,3 +38,5 @@ logs/
 *.seed
 *.pid.lock
 
+/database/
+
