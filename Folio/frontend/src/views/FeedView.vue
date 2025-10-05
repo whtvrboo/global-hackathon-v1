@@ -45,7 +45,7 @@
                                     {{ item.user.name }}
                                 </router-link>
                                 <span class="text-dark-300"> just published </span>
-                                <span class="font-bold text-white">"{{ item.title }}"</span>
+                                <span class="font-bold text-white">"{{ item.name }}"</span>
                             </p>
                             <div class="text-xs text-dark-500 mt-1">
                                 {{ timeAgo(item.created_at) }}
@@ -56,13 +56,13 @@
                     <!-- List Header Image -->
                     <div v-if="item.header_image_url"
                         class="aspect-video bg-gradient-to-br from-accent-blue/20 to-accent-purple/20 rounded-xl mb-4 overflow-hidden">
-                        <img :src="item.header_image_url" :alt="item.title"
+                        <img :src="item.header_image_url" :alt="item.name"
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
 
                     <!-- List Info -->
                     <div class="mb-4">
-                        <h3 class="text-heading-2 mb-2 group-hover:text-accent-blue transition-colors">{{ item.title }}
+                        <h3 class="text-heading-2 mb-2 group-hover:text-accent-blue transition-colors">{{ item.name }}
                         </h3>
                         <p v-if="item.description" class="text-body text-dark-300 line-clamp-2 mb-4">
                             {{ item.description }}
@@ -89,7 +89,7 @@
                     <!-- List Stats -->
                     <div class="flex items-center justify-between text-sm text-dark-400 pt-4 border-t border-dark-800">
                         <span class="font-medium">{{ item.items_count }} book{{ item.items_count !== 1 ? 's' : ''
-                        }}</span>
+                            }}</span>
                         <div class="flex items-center gap-4">
                             <button @click.stop="toggleLike(item.id)" class="flex items-center gap-1 transition-colors"
                                 :class="item.is_liked ? 'text-accent-red' : 'text-dark-400 hover:text-accent-red'">

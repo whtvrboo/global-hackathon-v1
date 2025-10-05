@@ -121,52 +121,68 @@
     </div>
 
     <!-- Add to List Modal -->
-    <div v-if="showAddToList" @click="showAddToList = false"
+    <div v-if="showAddToList" @click="closeAddToListModal"
       class="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div @click.stop class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+      <div @click.stop class="bg-dark-900 text-white rounded-2xl shadow-2xl max-w-md w-full p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">Add to List</h3>
-          <button @click="showAddToList = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+          <h3 class="text-lg font-semibold">{{ selectedListForNotes ? 'Add Your Note' : 'Add to List' }}</h3>
+          <button @click="closeAddToListModal" class="text-dark-400 hover:text-white transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
 
-        <div v-if="loadingLists" class="text-center py-4">
-          <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          <p class="mt-2 text-sm text-gray-600">Loading lists...</p>
-        </div>
-
-        <div v-else-if="userLists.length > 0" class="space-y-3">
-          <div v-for="list in userLists" :key="list.id" @click="addBookToList(list.id)"
-            class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-            <div class="flex items-center justify-between">
-              <div>
-                <h4 class="font-medium">{{ list.name }}</h4>
-                <p v-if="list.description" class="text-sm text-gray-500">{{ list.description }}</p>
-                <p class="text-xs text-gray-400">{{ list.items_count || 0 }} books</p>
-              </div>
-              <div class="text-gray-400">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-              </div>
-            </div>
+        <!-- View for adding curator notes -->
+        <div v-if="selectedListForNotes">
+          <p class="text-sm text-dark-300 mb-4">
+            You're adding <strong>{{ bookDetails.title }}</strong> to <strong>{{ selectedListForNotes.name }}</strong>.
+          </p>
+          <TextArea v-model="curatorNotes" placeholder="Why is this book on the list? What does it mean to you?"
+            :rows="5" />
+          <div class="flex justify-end gap-3 mt-4">
+            <SecondaryButton @click="selectedListForNotes = null">Back</SecondaryButton>
+            <PrimaryButton @click="addBookToList(selectedListForNotes.id)">Add Book</PrimaryButton>
           </div>
         </div>
 
-        <div v-else class="text-center py-4">
-          <p class="text-gray-600 mb-4">You don't have any lists yet.</p>
-          <button @click="createNewList" class="btn-primary text-sm">
-            Create Your First List
-          </button>
-        </div>
+        <!-- View for selecting a list -->
+        <div v-else>
+          <div v-if="loadingLists" class="text-center py-4">
+            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <p class="mt-2 text-sm text-dark-400">Loading lists...</p>
+          </div>
 
-        <div class="mt-4 pt-4 border-t">
-          <button @click="createNewList" class="w-full btn-secondary text-sm">
-            Create New List
-          </button>
+          <div v-else-if="userLists.length > 0" class="space-y-3 max-h-64 overflow-y-auto">
+            <div v-for="list in userLists" :key="list.id" @click="selectListForNotes(list)"
+              class="p-3 bg-dark-800 border border-dark-700 rounded-lg hover:bg-dark-700 cursor-pointer transition-colors">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="font-medium">{{ list.name }}</h4>
+                  <p v-if="list.description" class="text-sm text-dark-400 line-clamp-1">{{ list.description }}</p>
+                  <p class="text-xs text-dark-500">{{ list.items_count || 0 }} books</p>
+                </div>
+                <div class="text-dark-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="text-center py-4">
+            <p class="text-dark-300 mb-4">You don't have any lists yet.</p>
+            <button @click="createNewList" class="btn-primary text-sm">
+              Create Your First List
+            </button>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-dark-800">
+            <button @click="createNewList" class="w-full btn-secondary text-sm">
+              Create New List
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -184,6 +200,7 @@ import PrimaryButton from './ui/PrimaryButton.vue'
 import OutlineButton from './ui/OutlineButton.vue'
 import SecondaryButton from './ui/SecondaryButton.vue'
 import ListModal from './ListModal.vue'
+import TextArea from './ui/TextArea.vue'
 import { useToastStore } from '../stores/toast'
 
 const props = defineProps({
@@ -201,6 +218,8 @@ const showCreateListModal = ref(false)
 const userLists = ref([])
 const loadingLists = ref(false)
 const toastStore = useToastStore()
+const selectedListForNotes = ref(null)
+const curatorNotes = ref('')
 
 watch(() => props.show, async (newShow) => {
   if (newShow && props.bookId) {
@@ -246,9 +265,10 @@ const loadUserLists = async () => {
 const addBookToList = async (listId) => {
   try {
     await axios.post(`/api/lists/${listId}/items`, {
-      book_id: props.bookId
+      book_id: props.bookId,
+      notes: curatorNotes.value || null
     })
-    showAddToList.value = false
+    closeAddToListModal()
     toastStore.success('Book added to list successfully!')
   } catch (error) {
     if (error.response?.status === 409) {
@@ -269,5 +289,15 @@ const handleListCreated = () => {
   showCreateListModal.value = false
   // Optionally show the add to list modal again
   showAddToList.value = true
+}
+
+const selectListForNotes = (list) => {
+  selectedListForNotes.value = list
+}
+
+const closeAddToListModal = () => {
+  showAddToList.value = false
+  selectedListForNotes.value = null
+  curatorNotes.value = ''
 }
 </script>

@@ -148,6 +148,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	protected.PUT("/lists/:id", listHandler.UpdateList)
 	protected.DELETE("/lists/:id", listHandler.DeleteList)
 	protected.POST("/lists/:id/items", listHandler.AddBookToList)
+	protected.PUT("/lists/:id/items/:itemId", listHandler.UpdateListItem)
 	protected.PUT("/lists/:id/items/:itemId/order", listHandler.UpdateListItemOrder)
 	protected.PUT("/lists/:id/items/order", listHandler.ReorderListItems)
 	protected.DELETE("/lists/:id/items/:itemId", listHandler.RemoveBookFromList)

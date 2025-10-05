@@ -70,7 +70,7 @@
                     <!-- List Header Image -->
                     <div v-if="list.header_image_url"
                         class="aspect-video bg-gradient-to-br from-accent-blue/20 to-accent-purple/20 rounded-xl mb-4 overflow-hidden">
-                        <img :src="list.header_image_url" :alt="list.title"
+                        <img :src="list.header_image_url" :alt="list.name"
                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
                     <div v-else
@@ -79,7 +79,7 @@
 
                     <!-- List Info -->
                     <div class="p-4">
-                        <h3 class="text-heading-3 mb-2 line-clamp-2">{{ list.title }}</h3>
+                        <h3 class="text-heading-3 mb-2 line-clamp-2">{{ list.name }}</h3>
                         <p v-if="list.description" class="text-body text-dark-300 line-clamp-2 mb-4">
                             {{ list.description }}
                         </p>

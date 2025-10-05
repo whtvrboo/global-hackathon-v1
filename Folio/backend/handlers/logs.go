@@ -373,7 +373,7 @@ func (h *LogHandler) GetFeed(c echo.Context) error {
 				FROM list_items li
 				JOIN books b ON li.book_id = b.id
 				WHERE li.list_id = $1
-				ORDER BY li.order_index
+				ORDER BY li.item_order
 				LIMIT 3
 			`
 			bookRows, err := h.DB.Query(ctx, bookQuery, item.EntityID)

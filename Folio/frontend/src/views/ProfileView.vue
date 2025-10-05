@@ -9,6 +9,23 @@
         <p class="mt-4 text-dark-300">Loading your profile...</p>
       </div>
 
+      <!-- Error State -->
+      <div v-else-if="!user && !loading" class="text-center py-16">
+        <div class="text-6xl mb-6">😞</div>
+        <h3 class="text-heading-2 mb-4">Profile not found</h3>
+        <p class="text-body text-dark-300 mb-8 max-w-md mx-auto">
+          The user profile you're looking for doesn't exist or you don't have permission to view it.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button @click="$router.push('/')" class="btn-primary">
+            Go Home
+          </button>
+          <button @click="$router.push('/discover')" class="btn-secondary">
+            Discover Books
+          </button>
+        </div>
+      </div>
+
       <!-- Profile Content -->
       <div v-else-if="user" class="space-y-8">
         <!-- User Header -->
@@ -366,7 +383,11 @@ const isFollowing = ref(false)
 const followLoading = ref(false)
 
 const isOwnProfile = computed(() => {
-  return authStore.user?.username === route.params.username
+  // Check if the current user (authenticated or guest) is viewing their own profile
+  if (!authStore.isAuthenticated || !authStore.user) {
+    return false
+  }
+  return authStore.user.username === route.params.username
 })
 
 const tabs = [
@@ -473,6 +494,11 @@ onMounted(async () => {
   try {
     const username = route.params.username
 
+    // Ensure auth store is initialized for guest users
+    if (authStore.isAuthenticated && !authStore.user) {
+      await authStore.fetchUser()
+    }
+
     // Fetch user profile
     const profileResponse = await axios.get(`/api/users/${username}`)
     user.value = profileResponse.data
@@ -489,9 +515,14 @@ onMounted(async () => {
         .sort((a, b) => (b.rating || 0) - (a.rating || 0))
         .slice(0, 4)
         .map(log => log.book)
+    } else {
+      // Initialize empty arrays for new guest users
+      favoriteBooks.value = []
     }
   } catch (error) {
     console.error('Error loading profile:', error)
+    // Show error state instead of blank screen
+    user.value = null
   } finally {
     loading.value = false
   }

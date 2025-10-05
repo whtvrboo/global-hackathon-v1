@@ -19,6 +19,30 @@
                 </div>
 
                 <form @submit.prevent="handleSubmit" class="space-y-6">
+                    <!-- Live Preview -->
+                    <div>
+                        <label class="block text-sm font-medium text-white mb-2">
+                            Live Preview
+                        </label>
+                        <div
+                            class="aspect-video rounded-xl mb-4 flex items-center justify-center p-4 text-center bg-dark-800 border-2 border-dark-700 relative overflow-hidden">
+                            <div v-if="form.header_image_url" class="absolute inset-0">
+                                <img :src="form.header_image_url" alt="Header preview"
+                                    class="w-full h-full object-cover" @error="onImageError" />
+                                <div class="absolute inset-0 bg-black/40"></div>
+                            </div>
+                            <div class="relative">
+                                <h3 class="text-2xl font-bold" :style="{ color: form.theme_color }">
+                                    {{ form.name || 'My Awesome List' }}
+                                </h3>
+                                <p v-if="form.description" class="text-sm text-white/80 mt-1 line-clamp-2">
+                                    {{ form.description }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+
                     <!-- List Name -->
                     <div>
                         <label class="block text-sm font-medium text-white mb-2">
@@ -140,6 +164,10 @@ watch(() => props.show, (newShow) => {
         error.value = null
     }
 })
+
+const onImageError = (event) => {
+    event.target.style.display = 'none'; // Hide broken image icon
+}
 
 const handleSubmit = async () => {
     if (!form.name.trim()) {

@@ -172,9 +172,34 @@
                                 <p v-if="item.book.authors" class="text-body text-dark-300 mb-2">
                                     by {{ item.book.authors.join(', ') }}
                                 </p>
-                                <p v-if="item.notes" class="text-sm text-dark-400 italic">
-                                    "{{ item.notes }}"
-                                </p>
+                                <div v-if="editingItemId !== item.id">
+                                    <p v-if="item.notes" class="text-sm text-dark-400 italic flex items-center gap-2">
+                                        <span>"{{ item.notes }}"</span>
+                                        <button @click="startEditingNotes(item)"
+                                            class="text-dark-500 hover:text-white transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                    </p>
+                                    <button v-else @click="startEditingNotes(item)"
+                                        class="text-sm text-dark-400 hover:text-white transition-colors flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                        Add Note
+                                    </button>
+                                </div>
+                                <div v-else>
+                                    <TextArea v-model="editingNotes" class="w-full" :rows="3" />
+                                    <div class="flex gap-2 mt-2">
+                                        <PrimaryButton @click="saveNotes(item.id)" size="sm">Save</PrimaryButton>
+                                        <SecondaryButton @click="cancelEditingNotes" size="sm">Cancel</SecondaryButton>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Remove Button -->
@@ -214,6 +239,9 @@ import axios from 'axios'
 import draggable from 'vuedraggable'
 import ListModal from './ListModal.vue'
 import { useToastStore } from '../stores/toast'
+import PrimaryButton from './ui/PrimaryButton.vue'
+import SecondaryButton from './ui/SecondaryButton.vue'
+import TextArea from './ui/TextArea.vue'
 
 const router = useRouter()
 const lists = ref([])
@@ -223,6 +251,8 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const editingList = ref(null)
 const toastStore = useToastStore()
+const editingItemId = ref(null)
+const editingNotes = ref('')
 
 const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -270,6 +300,34 @@ const deleteList = async (list) => {
     } catch (error) {
         console.error('Error deleting list:', error)
         toastStore.error('Failed to delete list')
+    }
+}
+
+const startEditingNotes = (item) => {
+    editingItemId.value = item.id
+    editingNotes.value = item.notes || ''
+}
+
+const cancelEditingNotes = () => {
+    editingItemId.value = null
+    editingNotes.value = ''
+}
+
+const saveNotes = async (itemId) => {
+    try {
+        await axios.put(`/api/lists/${selectedList.value.id}/items/${itemId}`, {
+            notes: editingNotes.value
+        })
+        toastStore.success('Note updated successfully')
+        // Update the item in the local state
+        const item = selectedList.value.items.find(i => i.id === itemId)
+        if (item) {
+            item.notes = editingNotes.value
+        }
+        cancelEditingNotes()
+    } catch (error) {
+        console.error('Error saving notes:', error)
+        toastStore.error('Failed to save note')
     }
 }
 

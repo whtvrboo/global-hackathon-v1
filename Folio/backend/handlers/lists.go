@@ -35,6 +35,10 @@ type AddBookToListRequest struct {
 	Notes  *string `json:"notes"`
 }
 
+type UpdateListItemRequest struct {
+	Notes *string `json:"notes"`
+}
+
 type UpdateListItemOrderRequest struct {
 	Order int `json:"order"`
 }
@@ -586,6 +590,60 @@ func (h *ListHandler) DeleteList(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "list deleted successfully",
+	})
+}
+
+// UpdateListItem updates a list item's details (e.g., notes)
+func (h *ListHandler) UpdateListItem(c echo.Context) error {
+	userID := auth.GetUserID(c)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	listID := c.Param("id")
+	itemID := c.Param("itemId")
+
+	var req UpdateListItemRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	// Verify ownership
+	var ownerID string
+	err := h.DB.QueryRow(ctx, `
+		SELECT l.user_id FROM lists l
+		JOIN list_items li ON l.id = li.list_id
+		WHERE l.id = $1 AND li.id = $2
+	`, listID, itemID).Scan(&ownerID)
+
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "list item not found",
+		})
+	}
+
+	if ownerID != userID {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	_, err = h.DB.Exec(ctx, "UPDATE list_items SET notes = $1 WHERE id = $2", req.Notes, itemID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to update list item",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "list item updated successfully",
 	})
 }
 
