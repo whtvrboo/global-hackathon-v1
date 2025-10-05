@@ -16,7 +16,8 @@
                 <nav class="hidden md:flex items-center gap-6">
                     <router-link to="/discover" class="btn-ghost">Discover</router-link>
                     <router-link v-if="authStore.isAuthenticated" to="/feed" class="btn-ghost">Feed</router-link>
-                    <router-link v-if="authStore.isAuthenticated" to="/profile" class="btn-ghost">Profile</router-link>
+                    <router-link v-if="authStore.isAuthenticated" :to="`/profile/${authStore.user?.username}`"
+                        class="btn-ghost">Profile</router-link>
                     <router-link v-if="!authStore.isAuthenticated" to="/login" class="btn-primary">Login</router-link>
                     <button v-if="authStore.isAuthenticated" @click="authStore.logout()"
                         class="btn-ghost">Logout</button>
@@ -65,8 +66,9 @@
                 <span class="text-xs">Feed</span>
             </router-link>
 
-            <router-link to="/profile" class="flex flex-col items-center gap-1 p-3 transition-colors"
-                :class="isActive('/profile') ? 'text-accent-red' : 'text-dark-400 hover:text-white'">
+            <router-link :to="`/profile/${authStore.user?.username}`"
+                class="flex flex-col items-center gap-1 p-3 transition-colors"
+                :class="isActive(`/profile/${authStore.user?.username}`) ? 'text-accent-red' : 'text-dark-400 hover:text-white'">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>

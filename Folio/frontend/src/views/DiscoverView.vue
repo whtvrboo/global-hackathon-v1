@@ -28,7 +28,8 @@
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div v-for="user in popularUsers.slice(0, 6)" :key="user.id"
-                        class="card card-hover flex items-center gap-4 p-4">
+                        class="card card-hover flex items-center gap-4 p-4 cursor-pointer"
+                        @click="$router.push(`/profile/${user.username}`)">
                         <img v-if="user.picture" :src="user.picture" :alt="user.name"
                             class="w-16 h-16 rounded-full border-2 border-dark-700" />
                         <div v-else
@@ -43,11 +44,11 @@
                         </div>
 
                         <button v-if="authStore.isAuthenticated && !user.is_following"
-                            @click="followUser(user.username)" :disabled="followingUsers[user.username]"
+                            @click.stop="followUser(user.username)" :disabled="followingUsers[user.username]"
                             class="btn-primary text-sm px-3 py-2 disabled:opacity-50 whitespace-nowrap">
                             {{ followingUsers[user.username] ? 'Following...' : 'Follow' }}
                         </button>
-                        <button v-else-if="authStore.isAuthenticated"
+                        <button v-else-if="authStore.isAuthenticated" @click.stop
                             class="btn-secondary text-sm px-3 py-2 whitespace-nowrap">
                             Following
                         </button>

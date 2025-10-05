@@ -107,6 +107,74 @@ func (h *ListHandler) CreateList(c echo.Context) error {
 	})
 }
 
+// GetMyLists retrieves all lists for the current authenticated user
+func (h *ListHandler) GetMyLists(c echo.Context) error {
+	userID := auth.GetUserID(c)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	// Get all lists for the current user (both public and private)
+	query := `
+		SELECT id, user_id, name, description, is_public, header_image_url, theme_color, items_count, created_at, updated_at
+		FROM lists
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := h.DB.Query(ctx, query, userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch lists",
+		})
+	}
+	defer rows.Close()
+
+	lists := []map[string]interface{}{}
+	for rows.Next() {
+		var list struct {
+			ID             string
+			UserID         string
+			Name           string
+			Description    *string
+			IsPublic       bool
+			HeaderImageURL *string
+			ThemeColor     string
+			ItemsCount     int
+			CreatedAt      time.Time
+			UpdatedAt      time.Time
+		}
+
+		err := rows.Scan(&list.ID, &list.UserID, &list.Name, &list.Description, &list.IsPublic, &list.HeaderImageURL, &list.ThemeColor, &list.ItemsCount, &list.CreatedAt, &list.UpdatedAt)
+		if err != nil {
+			continue
+		}
+
+		lists = append(lists, map[string]interface{}{
+			"id":              list.ID,
+			"user_id":         list.UserID,
+			"name":            list.Name,
+			"description":     list.Description,
+			"is_public":       list.IsPublic,
+			"header_image_url": list.HeaderImageURL,
+			"theme_color":     list.ThemeColor,
+			"items_count":     list.ItemsCount,
+			"created_at":      list.CreatedAt,
+			"updated_at":      list.UpdatedAt,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"lists": lists,
+		"count": len(lists),
+	})
+}
+
 // GetUserLists retrieves all lists for a given username
 func (h *ListHandler) GetUserLists(c echo.Context) error {
 	username := c.Param("username")

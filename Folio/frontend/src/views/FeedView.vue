@@ -29,24 +29,28 @@
                     class="card card-hover cursor-pointer group">
                     <!-- User Info -->
                     <div class="flex items-center gap-4 mb-6">
-                        <div class="relative">
+                        <router-link :to="`/profile/${item.user.username}`"
+                            class="relative hover:opacity-80 transition-opacity">
                             <img v-if="item.user.picture" :src="item.user.picture" :alt="item.user.name"
                                 class="w-12 h-12 rounded-full border-2 border-dark-700" />
                             <div v-else
                                 class="w-12 h-12 rounded-full bg-dark-800 border-2 border-dark-700 flex items-center justify-center">
-                                <span class="text-dark-400">U</span>
+                                <span class="text-dark-400">👤</span>
+                            </div>
+                        </router-link>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-body text-dark-200 leading-relaxed">
+                                <router-link :to="`/profile/${item.user.username}`"
+                                    class="font-bold text-white hover:text-accent-blue transition-colors">
+                                    {{ item.user.name }}
+                                </router-link>
+                                <span class="text-dark-300"> just published </span>
+                                <span class="font-bold text-white">"{{ item.title }}"</span>
+                            </p>
+                            <div class="text-xs text-dark-500 mt-1">
+                                {{ timeAgo(item.created_at) }}
                             </div>
                         </div>
-                        <div class="flex-1">
-                            <div class="font-semibold text-white">{{ item.user.name }}</div>
-                            <div class="text-caption">
-                                @{{ item.user.username }} • {{ timeAgo(item.created_at) }}
-                            </div>
-                        </div>
-                        <span
-                            class="px-3 py-1 text-xs font-semibold rounded-full glass-strong text-accent-purple bg-accent-purple/20">
-                            Created a List
-                        </span>
                     </div>
 
                     <!-- List Header Image -->
@@ -85,7 +89,7 @@
                     <!-- List Stats -->
                     <div class="flex items-center justify-between text-sm text-dark-400 pt-4 border-t border-dark-800">
                         <span class="font-medium">{{ item.items_count }} book{{ item.items_count !== 1 ? 's' : ''
-                            }}</span>
+                        }}</span>
                         <div class="flex items-center gap-4">
                             <button @click.stop="toggleLike(item.id)" class="flex items-center gap-1 transition-colors"
                                 :class="item.is_liked ? 'text-accent-red' : 'text-dark-400 hover:text-accent-red'">

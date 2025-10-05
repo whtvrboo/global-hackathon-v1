@@ -75,6 +75,86 @@ func (h *SocialHandler) GetPopularUsers(c echo.Context) error {
 	})
 }
 
+// GetUserProfile returns a user's public profile by username
+func (h *SocialHandler) GetUserProfile(c echo.Context) error {
+	username := c.Param("username")
+	if username == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "username is required",
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	currentUserID := auth.GetUserID(c)
+
+	// Get user profile
+	var user struct {
+		ID       string
+		Username string
+		Name     string
+		Email    string
+		Picture  *string
+		Bio      *string
+		IsGuest  bool
+	}
+
+	query := `SELECT id, username, name, email, picture, bio, is_guest FROM users WHERE username = $1`
+	err := h.DB.QueryRow(ctx, query, username).Scan(
+		&user.ID, &user.Username, &user.Name, &user.Email, &user.Picture, &user.Bio, &user.IsGuest,
+	)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "user not found",
+		})
+	}
+
+	// Check if current user is following this user
+	var isFollowing bool
+	if currentUserID != "" {
+		h.DB.QueryRow(ctx,
+			"SELECT EXISTS(SELECT 1 FROM followers WHERE follower_id = $1 AND following_id = $2)",
+			currentUserID, user.ID,
+		).Scan(&isFollowing)
+	}
+
+	// Get follower and following counts
+	var followersCount, followingCount int
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM followers WHERE following_id = $1", user.ID).Scan(&followersCount)
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM followers WHERE follower_id = $1", user.ID).Scan(&followingCount)
+
+	// Get public list count
+	var publicListCount int
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM lists WHERE user_id = $1 AND is_public = true", user.ID).Scan(&publicListCount)
+
+	// Get reading stats
+	var totalBooks, readBooks, readingBooks, wantToReadBooks int
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM logs WHERE user_id = $1", user.ID).Scan(&totalBooks)
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM logs WHERE user_id = $1 AND status = 'read'", user.ID).Scan(&readBooks)
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM logs WHERE user_id = $1 AND status = 'reading'", user.ID).Scan(&readingBooks)
+	h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM logs WHERE user_id = $1 AND status = 'want_to_read'", user.ID).Scan(&wantToReadBooks)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"id":           user.ID,
+		"username":     user.Username,
+		"name":         user.Name,
+		"picture":      user.Picture,
+		"bio":          user.Bio,
+		"is_guest":     user.IsGuest,
+		"is_following": isFollowing,
+		"stats": map[string]interface{}{
+			"followers_count":    followersCount,
+			"following_count":    followingCount,
+			"public_lists":       publicListCount,
+			"total_books":        totalBooks,
+			"read_books":         readBooks,
+			"reading_books":      readingBooks,
+			"want_to_read_books": wantToReadBooks,
+		},
+	})
+}
+
 // FollowUser creates a follow relationship
 func (h *SocialHandler) FollowUser(c echo.Context) error {
 	followerID := auth.GetUserID(c)

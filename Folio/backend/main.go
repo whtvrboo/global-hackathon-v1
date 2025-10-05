@@ -119,6 +119,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	api.GET("/discover/lists", discoverHandler.GetTrendingLists)
 	api.GET("/lists/popular", listHandler.GetPopularLists)
 	api.GET("/users/popular", socialHandler.GetPopularUsers)
+	api.GET("/users/:username", socialHandler.GetUserProfile)
 
 	// Protected endpoints
 	protected := api.Group("", auth.JWTMiddleware)
@@ -141,6 +142,7 @@ func setupRoutes(e *echo.Echo, app *App) {
 	
 	// List endpoints
 	protected.POST("/lists", listHandler.CreateList)
+	protected.GET("/me/lists", listHandler.GetMyLists)
 	protected.GET("/users/:username/lists", listHandler.GetUserLists)
 	protected.GET("/lists/:id", listHandler.GetList)
 	protected.PUT("/lists/:id", listHandler.UpdateList)

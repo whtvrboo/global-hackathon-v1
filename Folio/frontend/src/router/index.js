@@ -18,9 +18,10 @@ const router = createRouter({
       meta: { public: true }
     },
     {
-      path: '/profile',
+      path: '/profile/:username',
       name: 'profile',
-      component: ProfileView
+      component: ProfileView,
+      meta: { public: true }
     },
     {
       path: '/feed',

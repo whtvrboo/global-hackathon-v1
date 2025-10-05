@@ -37,14 +37,39 @@
               </div>
               <p class="text-body text-dark-300 mb-4">@{{ user.username }}</p>
               <p v-if="user.bio" class="text-body text-dark-200 mb-4">{{ user.bio }}</p>
-              <button @click="showEditProfile = true" class="btn-secondary text-sm">
-                Edit Profile
+
+              <!-- Edit Profile Button (Own Profile) -->
+              <button v-if="isOwnProfile" @click="showEditProfile = true" class="btn-secondary text-sm">
+                ✏️ Edit Profile
+              </button>
+
+              <!-- Follow/Unfollow Button (Other's Profile) -->
+              <button v-else-if="authStore.isAuthenticated" @click="toggleFollow" :disabled="followLoading"
+                class="btn-primary text-sm disabled:opacity-50"
+                :class="isFollowing ? 'bg-dark-700 hover:bg-dark-600' : ''">
+                {{ followLoading ? 'Loading...' : (isFollowing ? '✓ Following' : '+ Follow') }}
               </button>
             </div>
           </div>
 
-          <!-- Stats Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pt-6 border-t border-dark-800">
+          <!-- Social Stats -->
+          <div v-if="user.stats" class="grid grid-cols-2 md:grid-cols-3 gap-6 mt-8 pt-6 border-t border-dark-800">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-accent-blue">{{ user.stats.followers_count }}</div>
+              <div class="text-caption">Followers</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-accent-green">{{ user.stats.following_count }}</div>
+              <div class="text-caption">Following</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-accent-purple">{{ user.stats.public_lists }}</div>
+              <div class="text-caption">Public Lists</div>
+            </div>
+          </div>
+
+          <!-- Reading Stats Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 pt-6 border-t border-dark-800">
             <div class="text-center">
               <div class="text-3xl font-bold text-accent-red">{{ stats.total }}</div>
               <div class="text-caption">Total Books</div>
@@ -316,14 +341,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import Card from '../components/ui/Card.vue'
 import BookCard from '../components/BookCard.vue'
 import PrimaryButton from '../components/ui/PrimaryButton.vue'
 import ListManager from '../components/ListManager.vue'
 import ProfileEditModal from '../components/ProfileEditModal.vue'
+import { useToastStore } from '../stores/toast'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const toastStore = useToastStore()
 
 const user = ref(null)
 const logs = ref([])
@@ -333,6 +362,12 @@ const currentTab = ref('lists')
 const selectedBook = ref(null)
 const viewMode = ref('grid')
 const showEditProfile = ref(false)
+const isFollowing = ref(false)
+const followLoading = ref(false)
+
+const isOwnProfile = computed(() => {
+  return authStore.user?.username === route.params.username
+})
 
 const tabs = [
   { label: 'Lists', value: 'lists' },
@@ -436,14 +471,16 @@ const getTimePeriod = (date) => {
 
 onMounted(async () => {
   try {
-    // Get current user
-    user.value = authStore.user
+    const username = route.params.username
+
+    // Fetch user profile
+    const profileResponse = await axios.get(`/api/users/${username}`)
+    user.value = profileResponse.data
+    isFollowing.value = profileResponse.data.is_following
 
     // Fetch user's logs
-    if (user.value?.username) {
-      const response = await axios.get(`/api/users/${user.value.username}/logs`)
-      logs.value = response.data.logs || []
-    }
+    const logsResponse = await axios.get(`/api/users/${username}/logs`)
+    logs.value = logsResponse.data.logs || []
 
     // Load favorite books (for now, get highest rated books)
     if (logs.value.length > 0) {
@@ -459,6 +496,28 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const toggleFollow = async () => {
+  if (followLoading.value) return
+
+  followLoading.value = true
+  try {
+    if (isFollowing.value) {
+      await axios.delete(`/api/users/${user.value.username}/follow`)
+      isFollowing.value = false
+      toastStore.info('Unfollowed')
+    } else {
+      await axios.post(`/api/users/${user.value.username}/follow`)
+      isFollowing.value = true
+      toastStore.success(`You're now following ${user.value.name}!`)
+    }
+  } catch (error) {
+    console.error('Error toggling follow:', error)
+    toastStore.error('Failed to update follow status')
+  } finally {
+    followLoading.value = false
+  }
+}
 
 const showBookDetail = (book) => {
   selectedBook.value = book

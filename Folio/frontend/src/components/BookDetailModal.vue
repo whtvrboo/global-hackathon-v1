@@ -233,7 +233,7 @@ const fetchBookDetails = async () => {
 const loadUserLists = async () => {
   try {
     loadingLists.value = true
-    const response = await axios.get('/api/users/me/lists')
+    const response = await axios.get('/api/me/lists')
     userLists.value = response.data.lists || []
   } catch (error) {
     console.error('Error loading user lists:', error)

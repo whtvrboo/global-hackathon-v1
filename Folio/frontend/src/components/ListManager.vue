@@ -235,7 +235,7 @@ const formatDate = (dateString) => {
 const loadLists = async () => {
     try {
         loading.value = true
-        const response = await axios.get('/api/users/me/lists')
+        const response = await axios.get('/api/me/lists')
         lists.value = response.data.lists || []
     } catch (error) {
         console.error('Error loading lists:', error)
