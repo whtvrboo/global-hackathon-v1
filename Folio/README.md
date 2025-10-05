@@ -643,8 +643,8 @@ sudo lsof -i :80
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](your-repo-url/issues)
-- **Discussions**: [GitHub Discussions](your-repo-url/discussions)
+- **Issues**: [GitHub Issues](https://github.com/whtvrboo/global-hackathon-v1/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/whtvrboo/global-hackathon-v1/discussions)
 - **Email**: your-email@example.com
 
 ---
