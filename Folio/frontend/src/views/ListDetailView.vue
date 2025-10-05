@@ -7,13 +7,14 @@
         <div class="text-4xl mb-4">😕</div>
         <p class="text-dark-300">{{ error }}</p>
     </div>
-    <div v-else-if="list" class="bg-dark-950 min-h-screen">
+    <div v-else-if="list" class="bg-dark-950 min-h-screen lg:pl-20">
         <ListHero :title="list.name" :description="list.description" :headerImageUrl="list.header_image_url"
             :themeColor="list.theme_color" :creator="list.creator" />
 
         <div class="container mx-auto max-w-4xl py-12 px-4">
             <div class="space-y-8">
-                <ListItemCard v-for="item in list.items" :key="item.id" :item="item" :themeColor="list.theme_color" />
+                <ListItemCard v-for="item in list.items" :key="item.id" :item="item" :themeColor="list.theme_color"
+                    @logBook="handleLogBook" />
             </div>
 
             <div class="mt-12 text-center">
@@ -27,21 +28,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Log Book Modal -->
+    <LogBookModal :show="showLogModal" :book="selectedBook" @close="showLogModal = false" @success="handleLogSuccess" />
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import ListHero from '../components/ListHero.vue'
 import ListItemCard from '../components/ListItemCard.vue'
 import PrimaryButton from '../components/ui/PrimaryButton.vue'
+import LogBookModal from '../components/LogBookModal.vue'
 import { useToastStore } from '../stores/toast'
 
 const route = useRoute()
+const router = useRouter()
 const list = ref(null)
 const loading = ref(true)
 const error = ref(null)
+const showLogModal = ref(false)
+const selectedBook = ref(null)
 const listId = computed(() => route.params.id)
 const toastStore = useToastStore()
 
@@ -67,6 +75,16 @@ const shareList = () => {
     }, () => {
         toastStore.error('Failed to copy link.')
     })
+}
+
+const handleLogBook = (book) => {
+    selectedBook.value = book
+    showLogModal.value = true
+}
+
+const handleLogSuccess = () => {
+    showLogModal.value = false
+    selectedBook.value = null
 }
 
 onMounted(() => {

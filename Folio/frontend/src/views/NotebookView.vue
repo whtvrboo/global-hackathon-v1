@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-dark-950">
+    <div class="min-h-screen bg-dark-950 lg:pl-20">
         <!-- Header -->
         <div class="bg-dark-900/50 backdrop-blur-sm border-b border-dark-800">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -75,7 +75,7 @@
                                     <img v-if="annotation.book.cover_url" :src="annotation.book.cover_url"
                                         :alt="annotation.book.title" class="w-6 h-8 object-cover rounded" />
                                     <span class="text-xs text-dark-400 truncate max-w-32">{{ annotation.book.title
-                                    }}</span>
+                                        }}</span>
                                 </div>
                             </div>
                         </div>

@@ -60,3 +60,26 @@ func IsGuestUser(c echo.Context) bool {
 	return isGuest
 }
 
+// OptionalJWTMiddleware validates JWT tokens if present, but doesn't require them
+func OptionalJWTMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		authHeader := c.Request().Header.Get("Authorization")
+		if authHeader != "" {
+			// Extract token from "Bearer <token>"
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString := parts[1]
+				claims, err := ValidateJWT(tokenString)
+				if err == nil {
+					// Store user info in context if token is valid
+					c.Set("user_id", claims.UserID)
+					c.Set("user_email", claims.Email)
+					c.Set("is_guest", claims.IsGuest)
+				}
+			}
+		}
+		
+		return next(c)
+	}
+}
+

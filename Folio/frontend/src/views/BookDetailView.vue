@@ -7,7 +7,7 @@
         <div class="text-4xl mb-4">😕</div>
         <p class="text-dark-300">{{ error }}</p>
     </div>
-    <div v-else-if="bookDetails" class="bg-dark-950 min-h-screen">
+    <div v-else-if="bookDetails" class="bg-dark-950 min-h-screen lg:pl-20">
         <!-- Book Hero Section -->
         <div
             class="relative w-full h-[40vh] text-white flex items-center justify-center text-center p-6 bg-gradient-to-br from-accent-blue via-accent-purple to-accent-red">

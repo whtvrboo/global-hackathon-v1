@@ -126,6 +126,7 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 			isOwnProfile = (currentUserID == profileUserID)
 		}
 	}
+	
 
 	var query string
 	var args []interface{}
@@ -146,8 +147,8 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 			LIMIT 50
 		`
 		args = []interface{}{username, currentUserID}
-	} else {
-		// Show only public logs for other users
+	} else if currentUserID != "" {
+		// Show only public logs for authenticated users viewing other profiles
 		query = `
 			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
 			       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
@@ -162,6 +163,22 @@ func (h *LogHandler) GetUserLogs(c echo.Context) error {
 			LIMIT 50
 		`
 		args = []interface{}{username, currentUserID}
+	} else {
+		// Show only public logs for unauthenticated users
+		query = `
+			SELECT l.id, l.user_id, l.book_id, l.status, l.rating, l.review,
+			       l.notes, l.start_date, l.finish_date, l.is_public, l.created_at,
+			       l.likes_count, l.comments_count,
+			       b.title, b.authors, b.cover_url,
+			       false as is_liked
+			FROM logs l
+			JOIN users u ON l.user_id = u.id
+			JOIN books b ON l.book_id = b.id
+			WHERE u.username = $1 AND l.is_public = true
+			ORDER BY l.created_at DESC
+			LIMIT 50
+		`
+		args = []interface{}{username}
 	}
 
 	rows, err := h.DB.Query(ctx, query, args...)

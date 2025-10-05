@@ -107,13 +107,14 @@ func (h *AuthHandler) upsertUser(ctx context.Context, userInfo *auth.GoogleUserI
 	}
 
 	query := `
-		INSERT INTO users (google_id, email, name, username, picture, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		INSERT INTO users (google_id, email, name, username, picture, is_guest, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, false, NOW(), NOW())
 		ON CONFLICT (google_id) 
 		DO UPDATE SET 
 			email = EXCLUDED.email,
 			name = EXCLUDED.name,
 			picture = EXCLUDED.picture,
+			is_guest = false,
 			updated_at = NOW()
 		RETURNING id
 	`

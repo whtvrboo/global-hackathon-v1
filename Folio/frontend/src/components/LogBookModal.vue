@@ -5,7 +5,7 @@
     <div v-if="show" @click="handleBackdropClick"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div @click.stop class="card-glass max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
-        
+
         <!-- Success State: Quick Review Prompt -->
         <div v-if="showReviewPrompt" class="text-center">
           <div class="text-6xl mb-6 animate-bounce">🎉</div>
@@ -20,12 +20,8 @@
             What's one thought you'd share with a friend?
           </p>
 
-          <TextArea 
-            v-model="quickReview" 
-            placeholder="Share your thoughts in a sentence or two..." 
-            :rows="4"
-            class="mb-6"
-          />
+          <TextArea v-model="quickReview" placeholder="Share your thoughts in a sentence or two..." :rows="4"
+            class="mb-6" />
 
           <div class="flex gap-3 justify-center">
             <SecondaryButton @click="skipReview">
@@ -41,148 +37,149 @@
         <div v-else>
           <h2 class="text-heading-2 mb-6">Log "{{ book?.title }}"</h2>
 
-        <!-- Existing Logs Section -->
-        <div v-if="existingLogs.length > 0"
-          class="mb-6 p-4 bg-gradient-to-r from-accent-red/10 to-accent-blue/10 border border-accent-red/20 rounded-lg">
-          <div class="flex items-start gap-3">
-            <div class="text-accent-red text-xl">📚</div>
-            <div class="flex-1">
-              <h3 class="text-heading-3 mb-2">You've read this book before!</h3>
-              <p class="text-body mb-3">
-                You have {{ existingLogs.length }} previous log{{ existingLogs.length > 1 ? 's' : '' }} for this book:
-              </p>
-              <div class="space-y-2 mb-4">
-                <div v-for="log in existingLogs" :key="log.id"
-                  class="text-sm bg-dark-800 p-3 rounded border border-dark-600">
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="font-medium text-white">{{ statusLabel(log.status) }}</span>
-                    <span class="text-muted">{{ formatDate(log.created_at) }}</span>
+          <!-- Existing Logs Section -->
+          <div v-if="existingLogs.length > 0"
+            class="mb-6 p-4 bg-gradient-to-r from-accent-red/10 to-accent-blue/10 border border-accent-red/20 rounded-lg">
+            <div class="flex items-start gap-3">
+              <div class="text-accent-red text-xl">📚</div>
+              <div class="flex-1">
+                <h3 class="text-heading-3 mb-2">You've read this book before!</h3>
+                <p class="text-body mb-3">
+                  You have {{ existingLogs.length }} previous log{{ existingLogs.length > 1 ? 's' : '' }} for this book:
+                </p>
+                <div class="space-y-2 mb-4">
+                  <div v-for="log in existingLogs" :key="log.id"
+                    class="text-sm bg-dark-800 p-3 rounded border border-dark-600">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="font-medium text-white">{{ statusLabel(log.status) }}</span>
+                      <span class="text-muted">{{ formatDate(log.created_at) }}</span>
+                    </div>
+                    <div v-if="log.rating" class="text-yellow-500 mb-1">
+                      {{ '★'.repeat(log.rating) }}{{ '☆'.repeat(5 - log.rating) }} ({{ log.rating }}/5)
+                    </div>
+                    <p v-if="log.review" class="text-dark-300 text-xs line-clamp-2">{{ log.review }}</p>
                   </div>
-                  <div v-if="log.rating" class="text-yellow-500 mb-1">
-                    {{ '★'.repeat(log.rating) }}{{ '☆'.repeat(5 - log.rating) }} ({{ log.rating }}/5)
-                  </div>
-                  <p v-if="log.review" class="text-dark-300 text-xs line-clamp-2">{{ log.review }}</p>
+                </div>
+                <div class="flex gap-3">
+                  <button @click="handleLogAnotherReading" class="btn-primary flex items-center gap-2">
+                    <span>📖</span>
+                    <span>Log This New Reading</span>
+                  </button>
+                  <button @click="handleViewExistingLogs" class="btn-secondary flex items-center gap-2">
+                    <span>👁️</span>
+                    <span>View Existing Logs</span>
+                  </button>
                 </div>
               </div>
-              <div class="flex gap-3">
-                <button @click="handleLogAnotherReading" class="btn-primary flex items-center gap-2">
-                  <span>📖</span>
-                  <span>Log This New Reading</span>
-                </button>
-                <button @click="handleViewExistingLogs" class="btn-secondary flex items-center gap-2">
-                  <span>👁️</span>
-                  <span>View Existing Logs</span>
+            </div>
+          </div>
+
+          <form @submit.prevent="handleSubmit" class="space-y-6">
+            <!-- Status -->
+            <div>
+              <label class="block text-sm font-medium text-white mb-2">
+                Reading Status *
+              </label>
+              <div class="grid grid-cols-2 gap-3">
+                <button v-for="option in statusOptions" :key="option.value" type="button"
+                  @click="form.status = option.value" :class="[
+                    'p-4 border-2 rounded-lg text-left transition-all',
+                    form.status === option.value
+                      ? 'border-accent-red bg-accent-red/10'
+                      : 'border-dark-600 hover:border-dark-500 bg-dark-800'
+                  ]">
+                  <div class="text-2xl mb-1">{{ option.emoji }}</div>
+                  <div class="font-medium text-white">{{ option.label }}</div>
+                  <div class="text-xs text-muted">{{ option.description }}</div>
                 </button>
               </div>
             </div>
-          </div>
-        </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-6">
-          <!-- Status -->
-          <div>
-            <label class="block text-sm font-medium text-white mb-2">
-              Reading Status *
-            </label>
-            <div class="grid grid-cols-2 gap-3">
-              <button v-for="option in statusOptions" :key="option.value" type="button"
-                @click="form.status = option.value" :class="[
-                  'p-4 border-2 rounded-lg text-left transition-all',
-                  form.status === option.value
-                    ? 'border-accent-red bg-accent-red/10'
-                    : 'border-dark-600 hover:border-dark-500 bg-dark-800'
-                ]">
-                <div class="text-2xl mb-1">{{ option.emoji }}</div>
-                <div class="font-medium text-white">{{ option.label }}</div>
-                <div class="text-xs text-muted">{{ option.description }}</div>
-              </button>
+            <!-- Rating -->
+            <div>
+              <label class="block text-sm font-medium text-white mb-2">
+                Your Rating
+              </label>
+              <div class="flex gap-2">
+                <button v-for="star in 5" :key="star" type="button" @click="form.rating = star"
+                  class="text-4xl transition-transform hover:scale-110"
+                  :class="star <= (form.rating || 0) ? 'text-yellow-500' : 'text-dark-400'">
+                  ★
+                </button>
+                <button v-if="form.rating" type="button" @click="form.rating = null"
+                  class="ml-2 text-sm text-muted hover:text-white">
+                  Clear
+                </button>
+              </div>
             </div>
-          </div>
 
-          <!-- Rating -->
-          <div>
-            <label class="block text-sm font-medium text-white mb-2">
-              Your Rating
-            </label>
-            <div class="flex gap-2">
-              <button v-for="star in 5" :key="star" type="button" @click="form.rating = star"
-                class="text-4xl transition-transform hover:scale-110"
-                :class="star <= (form.rating || 0) ? 'text-yellow-500' : 'text-dark-400'">
-                ★
-              </button>
-              <button v-if="form.rating" type="button" @click="form.rating = null"
-                class="ml-2 text-sm text-muted hover:text-white">
-                Clear
-              </button>
+            <!-- Review -->
+            <div>
+              <label class="block text-sm font-medium text-white mb-2">
+                Review
+              </label>
+              <TextArea v-model="form.review" placeholder="What did you think about this book?" :rows="4" />
+
+              <!-- Spoiler Warning -->
+              <div class="mt-3 flex items-center gap-2">
+                <input type="checkbox" id="spoiler-flag" v-model="form.spoiler_flag"
+                  class="w-4 h-4 text-accent-red bg-dark-800 border-dark-600 rounded focus:ring-accent-red focus:ring-2" />
+                <label for="spoiler-flag" class="text-sm text-dark-300">
+                  Contains spoilers
+                </label>
+              </div>
             </div>
-          </div>
 
-          <!-- Review -->
-          <div>
-            <label class="block text-sm font-medium text-white mb-2">
-              Review
-            </label>
-            <TextArea v-model="form.review" placeholder="What did you think about this book?" :rows="4" />
+            <!-- Notes (Private) -->
+            <div>
+              <label class="block text-sm font-medium text-white mb-2">
+                Private Notes
+              </label>
+              <TextArea v-model="form.notes" placeholder="Personal notes, quotes, or thoughts (only visible to you)"
+                :rows="3" />
+            </div>
 
-            <!-- Spoiler Warning -->
-            <div class="mt-3 flex items-center gap-2">
-              <input type="checkbox" id="spoiler-flag" v-model="form.spoiler_flag"
+            <!-- Dates -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-white mb-2">
+                  Start Date
+                </label>
+                <Input v-model="form.start_date" type="date" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-white mb-2">
+                  Finish Date
+                </label>
+                <Input v-model="form.finish_date" type="date" />
+              </div>
+            </div>
+
+            <!-- Visibility -->
+            <div class="flex items-center gap-3">
+              <input v-model="form.is_public" type="checkbox" id="is_public"
                 class="w-4 h-4 text-accent-red bg-dark-800 border-dark-600 rounded focus:ring-accent-red focus:ring-2" />
-              <label for="spoiler-flag" class="text-sm text-dark-300">
-                Contains spoilers
+              <label for="is_public" class="text-sm text-dark-300">
+                Make this log public (visible to followers)
               </label>
             </div>
-          </div>
 
-          <!-- Notes (Private) -->
-          <div>
-            <label class="block text-sm font-medium text-white mb-2">
-              Private Notes
-            </label>
-            <TextArea v-model="form.notes" placeholder="Personal notes, quotes, or thoughts (only visible to you)"
-              :rows="3" />
-          </div>
-
-          <!-- Dates -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-white mb-2">
-                Start Date
-              </label>
-              <Input v-model="form.start_date" type="date" />
+            <!-- Error -->
+            <div v-if="error"
+              class="p-4 bg-accent-red/10 border border-accent-red/20 rounded-lg text-accent-red text-sm">
+              {{ error }}
             </div>
-            <div>
-              <label class="block text-sm font-medium text-white mb-2">
-                Finish Date
-              </label>
-              <Input v-model="form.finish_date" type="date" />
+
+            <!-- Actions -->
+            <div class="flex gap-3 justify-end pt-4 border-t border-dark-600">
+              <SecondaryButton @click="$emit('close')" type="button">
+                Cancel
+              </SecondaryButton>
+              <PrimaryButton type="submit" :loading="loading">
+                Save Log
+              </PrimaryButton>
             </div>
-          </div>
-
-          <!-- Visibility -->
-          <div class="flex items-center gap-3">
-            <input v-model="form.is_public" type="checkbox" id="is_public"
-              class="w-4 h-4 text-accent-red bg-dark-800 border-dark-600 rounded focus:ring-accent-red focus:ring-2" />
-            <label for="is_public" class="text-sm text-dark-300">
-              Make this log public (visible to followers)
-            </label>
-          </div>
-
-          <!-- Error -->
-          <div v-if="error" class="p-4 bg-accent-red/10 border border-accent-red/20 rounded-lg text-accent-red text-sm">
-            {{ error }}
-          </div>
-
-          <!-- Actions -->
-          <div class="flex gap-3 justify-end pt-4 border-t border-dark-600">
-            <SecondaryButton @click="$emit('close')" type="button">
-              Cancel
-            </SecondaryButton>
-            <PrimaryButton type="submit" :loading="loading">
-              Save Log
-            </PrimaryButton>
-          </div>
-        </form>
+          </form>
         </div>
       </div>
     </div>
@@ -346,6 +343,10 @@ const handleSubmit = async () => {
       } else {
         toastStore.success(`Successfully logged "${props.book.title}"!`)
       }
+
+      // Signal that a log was created (for profile refresh)
+      localStorage.setItem('folio_log_created', 'true')
+
       emit('success')
       emit('close')
     }
@@ -369,6 +370,10 @@ const publishQuickReview = async () => {
     })
 
     toastStore.success('Review published! 🎉')
+
+    // Signal that a log was created (for profile refresh)
+    localStorage.setItem('folio_log_created', 'true')
+
     emit('success')
     emit('close')
   } catch (err) {
@@ -381,6 +386,10 @@ const publishQuickReview = async () => {
 
 const skipReview = () => {
   toastStore.success(`Successfully logged "${props.book.title}"!`)
+
+  // Signal that a log was created (for profile refresh)
+  localStorage.setItem('folio_log_created', 'true')
+
   emit('success')
   emit('close')
 }

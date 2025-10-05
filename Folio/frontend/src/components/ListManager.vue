@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-6">
+    <div class="space-y-6 px-6">
         <!-- Header -->
         <div class="flex items-center justify-between">
             <h3 class="text-heading-3">My Lists</h3>

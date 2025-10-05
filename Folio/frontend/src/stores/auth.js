@@ -93,15 +93,34 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (error) {
       console.error('Failed to fetch user:', error)
-      // If regular user fails, try guest endpoint as fallback
+      
+      // Parse JWT token to determine correct guest status
+      let correctGuestStatus = false
       try {
-        const guestResponse = await axios.get('/api/guest/me')
-        user.value = guestResponse.data
-        isGuest.value = true
-      } catch (guestError) {
-        console.error('Failed to fetch guest user:', guestError)
+        const tokenParts = token.value.split('.')
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]))
+          correctGuestStatus = payload.is_guest === true
+        }
+      } catch (parseError) {
+        console.error('Failed to parse JWT in error handler:', parseError)
+      }
+      
+      // Try the appropriate endpoint based on JWT token
+      try {
+        if (correctGuestStatus) {
+          const guestResponse = await axios.get('/api/guest/me')
+          user.value = guestResponse.data
+          isGuest.value = true
+        } else {
+          const response = await axios.get('/api/me')
+          user.value = response.data
+          isGuest.value = false
+        }
+      } catch (fallbackError) {
+        console.error('Failed to fetch user with fallback:', fallbackError)
         // If both fail, clear token
-        if (guestError.response?.status === 401) {
+        if (fallbackError.response?.status === 401) {
           logout()
         }
       }

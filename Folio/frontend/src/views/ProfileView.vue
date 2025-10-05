@@ -7,7 +7,7 @@
     <div class="text-4xl mb-4">😞</div>
     <p class="text-dark-300">{{ error }}</p>
   </div>
-  <div v-else-if="user" class="bg-dark-950 min-h-screen">
+  <div v-else-if="user" class="bg-dark-950 min-h-screen lg:pl-20">
     <!-- Profile Hero Section - Compact -->
     <div
       class="relative w-full h-[25vh] text-white flex items-center justify-center text-center p-4 bg-gradient-to-br from-accent-red via-accent-purple to-accent-blue">
@@ -303,7 +303,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
@@ -473,6 +473,33 @@ const fetchProfile = async () => {
 
 onMounted(() => {
   fetchProfile()
+
+  // Listen for log creation events from other pages
+  const handleStorageChange = (e) => {
+    if (e.key === 'folio_log_created' && e.newValue) {
+      console.log('Log created, refreshing profile...')
+      fetchProfile()
+      localStorage.removeItem('folio_log_created')
+    }
+  }
+
+  window.addEventListener('storage', handleStorageChange)
+
+  // Also check on page focus (for same-tab navigation)
+  const handleFocus = () => {
+    if (localStorage.getItem('folio_log_created')) {
+      console.log('Log created, refreshing profile...')
+      fetchProfile()
+      localStorage.removeItem('folio_log_created')
+    }
+  }
+
+  window.addEventListener('focus', handleFocus)
+})
+
+// Refresh profile data when returning to this page (e.g., after logging a book)
+onActivated(() => {
+  fetchProfile()
 })
 
 const toggleFollow = async () => {
@@ -557,4 +584,5 @@ const sendInvite = async () => {
     inviteLoading.value = false
   }
 }
+
 </script>
